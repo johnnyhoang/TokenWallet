@@ -115,6 +115,182 @@ function AppIcon({ title, frontendUrl, id }: { title: string; frontendUrl?: stri
   );
 }
 
+function formatInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} style={{ color: '#f8fafc', fontWeight: 600 }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code
+          key={i}
+          style={{
+            background: 'rgba(99, 102, 241, 0.18)',
+            color: '#a5b4fc',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            fontFamily: 'monospace',
+            fontSize: '0.85em',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+          }}
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+}
+
+function SpecDocRenderer({ content }: { content: string }) {
+  if (!content) return <div style={{ opacity: 0.6 }}>Chưa có nội dung đặc tả.</div>;
+
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: React.ReactNode[] = [];
+  let inList = false;
+
+  const flushList = (keyPrefix: string) => {
+    if (inList && listItems.length > 0) {
+      elements.push(
+        <ul
+          key={`ul-${keyPrefix}-${elements.length}`}
+          style={{ paddingLeft: '1.2rem', marginBottom: '1rem', lineHeight: '1.75' }}
+        >
+          {listItems}
+        </ul>
+      );
+      listItems = [];
+      inList = false;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushList(`${index}`);
+      return;
+    }
+
+    if (trimmed.startsWith('# ')) {
+      flushList(`${index}`);
+      elements.push(
+        <h1
+          key={index}
+          style={{
+            fontSize: '1.35rem',
+            fontWeight: 700,
+            color: '#60a5fa',
+            borderBottom: '2px solid rgba(99, 102, 241, 0.3)',
+            paddingBottom: '0.4rem',
+            marginTop: index === 0 ? '0' : '1.4rem',
+            marginBottom: '0.85rem',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {formatInline(trimmed.substring(2))}
+        </h1>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('## ')) {
+      flushList(`${index}`);
+      elements.push(
+        <h2
+          key={index}
+          style={{
+            fontSize: '1.1rem',
+            fontWeight: 700,
+            color: '#38bdf8',
+            background: 'rgba(56, 189, 248, 0.08)',
+            padding: '0.4rem 0.75rem',
+            borderRadius: '6px',
+            borderLeft: '4px solid #38bdf8',
+            marginTop: '1.25rem',
+            marginBottom: '0.75rem',
+          }}
+        >
+          {formatInline(trimmed.substring(3))}
+        </h2>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('### ')) {
+      flushList(`${index}`);
+      elements.push(
+        <h3
+          key={index}
+          style={{
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            color: '#a7f3d0',
+            marginTop: '1rem',
+            marginBottom: '0.4rem',
+          }}
+        >
+          {formatInline(trimmed.substring(4))}
+        </h3>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      inList = true;
+      listItems.push(
+        <li key={index} style={{ marginBottom: '0.35rem', color: '#cbd5e1' }}>
+          {formatInline(trimmed.substring(2))}
+        </li>
+      );
+      return;
+    }
+
+    if (/^\d+\.\s/.test(trimmed)) {
+      flushList(`${index}`);
+      const text = trimmed.replace(/^\d+\.\s/, '');
+      const numMatch = trimmed.match(/^\d+\./);
+      elements.push(
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            gap: '0.6rem',
+            marginBottom: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.03)',
+            padding: '0.45rem 0.75rem',
+            borderRadius: '6px',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
+          <span style={{ fontWeight: 700, color: '#818cf8', minWidth: '1.2rem' }}>
+            {numMatch ? numMatch[0] : ''}
+          </span>
+          <span style={{ color: '#e2e8f0' }}>{formatInline(text)}</span>
+        </div>
+      );
+      return;
+    }
+
+    flushList(`${index}`);
+    elements.push(
+      <p key={index} style={{ marginBottom: '0.75rem', color: '#cbd5e1', lineHeight: '1.65' }}>
+        {formatInline(trimmed)}
+      </p>
+    );
+  });
+
+  flushList('final');
+
+  return <div>{elements}</div>;
+}
+
 export default function AppWallet() {
   const { permissions } = useAuth();
   const canEdit = !!permissions?.can_edit_app_wallet;
@@ -1000,22 +1176,24 @@ export default function AppWallet() {
 
           <div
             style={{
-              maxHeight: '62vh',
+              maxHeight: '64vh',
               overflowY: 'auto',
-              padding: '1.2rem',
-              background: 'rgba(15, 23, 42, 0.75)',
-              borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontSize: '0.88rem',
-              lineHeight: 1.65,
+              padding: '1.4rem',
+              background: 'rgba(15, 23, 42, 0.85)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              fontSize: '0.9rem',
+              lineHeight: 1.7,
               color: '#cbd5e1',
             }}
           >
-            {activeModal.lang === 'en'
-              ? (activeModal.project.specEn || 'No English specification available for this project.')
-              : (activeModal.project.specVi || 'Chưa có đặc tả tiếng Việt cho dự án này.')}
+            <SpecDocRenderer
+              content={
+                activeModal.lang === 'en'
+                  ? (activeModal.project.specEn || 'No English specification available for this project.')
+                  : (activeModal.project.specVi || 'Chưa có đặc tả tiếng Việt cho dự án này.')
+              }
+            />
           </div>
 
           <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
