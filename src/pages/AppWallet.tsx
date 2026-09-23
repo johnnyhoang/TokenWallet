@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import CodeExperience from './CodeExperience';
 import { supabase } from '../utils/supabaseClient';
@@ -57,33 +57,47 @@ function getAppInitials(title: string): string {
   return title.slice(0, 2).toUpperCase();
 }
 
-function getFaviconUrl(url?: string): string | null {
-  if (!url || !url.trim()) return null;
-  try {
-    const formattedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
-    const parsed = new URL(formattedUrl);
-    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || !parsed.hostname.includes('.')) {
-      return null;
-    }
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=128`;
-  } catch {
-    return null;
+function getFaviconCandidates(url?: string, id?: string): string[] {
+  const candidates: string[] = [];
+  if (id) {
+    candidates.push(`/favicons/${id}.svg`);
   }
+  if (url && url.trim()) {
+    try {
+      const formattedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+      const parsed = new URL(formattedUrl);
+      if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1' && parsed.hostname.includes('.')) {
+        candidates.push(`${parsed.origin}/favicon.svg`);
+        candidates.push(`${parsed.origin}/favicon.ico`);
+        candidates.push(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=128`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return candidates;
 }
 
 function AppIcon({ title, frontendUrl, id }: { title: string; frontendUrl?: string; id: string }) {
-  const [hasError, setHasError] = useState(false);
-  const faviconUrl = useMemo(() => getFaviconUrl(frontendUrl), [frontendUrl]);
+  const candidates = useMemo(() => getFaviconCandidates(frontendUrl, id), [frontendUrl, id]);
+  const [candidateIndex, setCandidateIndex] = useState(0);
   const initials = getAppInitials(title);
   const bgGradient = getAppGradient(title + id);
 
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [frontendUrl, id]);
+
+  const currentSrc = candidateIndex < candidates.length ? candidates[candidateIndex] : null;
+
   return (
     <div className="store-app-icon" style={{ background: bgGradient }}>
-      {faviconUrl && !hasError ? (
+      {currentSrc ? (
         <img
-          src={faviconUrl}
+          key={currentSrc}
+          src={currentSrc}
           alt={title}
-          onError={() => setHasError(true)}
+          onError={() => setCandidateIndex((prev) => prev + 1)}
           style={{
             width: '100%',
             height: '100%',
