@@ -570,20 +570,26 @@ const { data: { publicUrl } } = supabase.storage
           <p className="note-desc">Khi nhiều Web App (JohnnyHoang's Wallet, Family, BETH...) dùng chung 1 Supabase Project, người dùng đăng nhập tại App A có thể bị nhảy nhầm về Site URL mặc định nếu không cấu hình <code>redirectTo</code> và Whitelist chính xác.</p>
 
           <h3>Nguyên Nhân Bị Fallback Nhầm App</h3>
-          <p>Mặc định trong Supabase Dashboard có một trường <strong>Site URL</strong> (ví dụ: <code>https://johnnyhoang-wallet-chi.vercel.app</code>). Nếu App B (<code>https://family.minkoi.org</code>) gọi <code>signInWithOAuth()</code> mà không khai báo <code>redirectTo</code> hoặc URL của App B chưa nằm trong Whitelist, Supabase sẽ <strong>tự động fallback quay về Site URL mặc định</strong> (App A).</p>
+          <p>Mặc định trong Supabase Dashboard có một trường <strong>Site URL</strong> (ví dụ: <code>https://wallet.minkoi.org</code>). Nếu App B (<code>https://family.minkoi.org</code>) gọi <code>signInWithOAuth()</code> mà không khai báo <code>redirectTo</code> hoặc URL của App B chưa nằm trong Whitelist, Supabase sẽ <strong>tự động fallback quay về Site URL mặc định</strong> (App A).</p>
 
           <h3>Giải Pháp 1 — Whitelist Đủ Redirect URLs trong Supabase</h3>
           <Step n={1}>
             <p>Vào <strong>Supabase Dashboard</strong> → Authentication → URL Configuration</p>
           </Step>
           <Step n={2}>
-            <p><strong>Site URL:</strong> Đặt domain chính hoặc app trung tâm (ví dụ: <code>https://johnnyhoang-wallet-chi.vercel.app</code>)</p>
+            <p><strong>Site URL:</strong> Đặt domain chính hoặc app trung tâm (ví dụ: <code>https://wallet.minkoi.org</code>)</p>
           </Step>
           <Step n={3}>
             <p><strong>Redirect URLs (Whitelist):</strong> Thêm <em>TẤT CẢ</em> domain production + localhost của các sub-app. Dùng wildcard <code>**</code> để hỗ trợ mọi sub-route:</p>
-            <CodeBlock lang="text" code={`https://family.minkoi.org/**
-https://beth-theta.vercel.app/**
-https://ade-flame.vercel.app/**
+            <CodeBlock lang="text" code={`https://wallet.minkoi.org/**
+https://family.minkoi.org/**
+https://beth.minkoi.org/**
+https://ade.minkoi.org/**
+https://talent.minkoi.org/**
+https://collab.minkoi.org/**
+https://lnd.minkoi.org/**
+https://hub.minkoi.org/**
+https://shopee.minkoi.org/**
 http://localhost:5173/**
 http://localhost:3000/**`} />
           </Step>
@@ -678,7 +684,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://family.minkoi.org',
-  'https://johnnyhoang-wallet-chi.vercel.app'
+  'https://wallet.minkoi.org'
 ];
 
 app.use(cors({

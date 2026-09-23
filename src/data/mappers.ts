@@ -47,6 +47,7 @@ export interface AppProjectRow {
   url?: string;
   type?: string;
   category?: string;
+  database?: string;
   status?: string;
   priority?: string;
   description?: string;
@@ -65,6 +66,8 @@ export interface AppProjectMeta {
   manualCheckedAt?: string;
   healthStatus?: 'healthy' | 'checking' | 'failed' | 'unknown';
   healthCheckedAt?: string;
+  specVi?: string;
+  specEn?: string;
 }
 
 export interface AppProject {
@@ -72,6 +75,7 @@ export interface AppProject {
   title: string;
   frontendUrl?: string;
   category: string;
+  database?: string;
   status: string;
   priority: string;
   description?: string;
@@ -81,6 +85,8 @@ export interface AppProject {
   manualCheckedAt?: string;
   healthStatus?: 'healthy' | 'checking' | 'failed' | 'unknown';
   healthCheckedAt?: string;
+  specVi?: string;
+  specEn?: string;
   backlog?: BacklogItem[];
 }
 
@@ -205,7 +211,7 @@ export function parseTechNotesMeta(raw?: string | null): { cleanNotes: string; m
 
 export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): string {
   const notes = cleanNotes?.trim() || '';
-  if (!meta || (!meta.isDisabled && !meta.manualChecked && !meta.manualCheckedAt && !meta.healthStatus && !meta.healthCheckedAt)) {
+  if (!meta) {
     return notes;
   }
   const metaPayload: AppProjectMeta = {};
@@ -214,6 +220,8 @@ export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): 
   if (meta.manualCheckedAt) metaPayload.manualCheckedAt = meta.manualCheckedAt;
   if (meta.healthStatus && meta.healthStatus !== 'unknown') metaPayload.healthStatus = meta.healthStatus;
   if (meta.healthCheckedAt) metaPayload.healthCheckedAt = meta.healthCheckedAt;
+  if (meta.specVi) metaPayload.specVi = meta.specVi;
+  if (meta.specEn) metaPayload.specEn = meta.specEn;
 
   const metaStr = `${META_PREFIX}${JSON.stringify(metaPayload)}${META_SUFFIX}`;
   return notes ? `${notes}\n${metaStr}` : metaStr;
@@ -226,6 +234,7 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
     title: row.name || row.title || 'Untitled App',
     frontendUrl: row.url || undefined,
     category: row.type || row.category || 'Web App',
+    database: row.database || undefined,
     status: row.status || 'Development',
     priority: row.priority || 'Medium',
     description: row.description || undefined,
@@ -235,6 +244,8 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
     manualCheckedAt: row.manual_checked_at || meta.manualCheckedAt,
     healthStatus: (row.health_status || meta.healthStatus || 'unknown') as any,
     healthCheckedAt: row.health_checked_at || meta.healthCheckedAt,
+    specVi: meta.specVi || undefined,
+    specEn: meta.specEn || undefined,
   };
 }
 
@@ -245,6 +256,8 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
     manualCheckedAt: project.manualCheckedAt,
     healthStatus: project.healthStatus,
     healthCheckedAt: project.healthCheckedAt,
+    specVi: project.specVi,
+    specEn: project.specEn,
   });
 
   return {
@@ -252,6 +265,7 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
     name: project.title,
     url: project.frontendUrl || '',
     type: project.category,
+    database: project.database || undefined,
     status: project.status,
     priority: project.priority,
     description: project.description || '',

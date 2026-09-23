@@ -159,8 +159,9 @@ export default function AppWallet() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeModal, setActiveModal] = useState<{
-    type: 'edit-app';
+    type: 'edit-app' | 'view-spec';
     project?: AppProject;
+    lang?: 'vi' | 'en';
   } | null>(null);
 
   const [modalForm, setModalForm] = useState<Partial<AppProject>>({});
@@ -299,6 +300,7 @@ export default function AppWallet() {
         title: '',
         frontendUrl: '',
         category: 'Web App',
+        database: 'JH Supabase NoData',
         status: 'Development',
         priority: 'Medium',
         description: '',
@@ -321,6 +323,7 @@ export default function AppWallet() {
         title: modalForm.title.trim(),
         frontendUrl: modalForm.frontendUrl?.trim() || '',
         category: modalForm.category || 'Web App',
+        database: modalForm.database !== undefined ? modalForm.database : activeModal.project.database,
         status: modalForm.status || 'Development',
         priority: modalForm.priority || 'Medium',
         description: modalForm.description || '',
@@ -367,6 +370,7 @@ export default function AppWallet() {
         title: modalForm.title.trim(),
         frontendUrl: modalForm.frontendUrl?.trim() || '',
         category: modalForm.category || 'Web App',
+        database: modalForm.database || 'JH Supabase NoData',
         status: modalForm.status || 'Development',
         priority: modalForm.priority || 'Medium',
         description: modalForm.description || '',
@@ -573,7 +577,7 @@ export default function AppWallet() {
                   </div>
                 </div>
 
-                {/* Status Bar: Health dot + Status badge */}
+                {/* Status Bar: Health dot + Status badge + Specs button */}
                 <div className="store-card-status-bar">
                   <div
                     className="store-health-tag"
@@ -593,8 +597,67 @@ export default function AppWallet() {
                     </span>
                   </div>
 
-                  <span className="store-status-badge">{app.status}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal({ type: 'view-spec', project: app, lang: 'vi' })}
+                      title="Xem Đặc Tả Kỹ Thuật (Specification)"
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '6px',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: '#60a5fa',
+                        border: '1px solid rgba(59, 130, 246, 0.35)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
+                      <span>📋</span>
+                      <span>Specs</span>
+                    </button>
+                    <span className="store-status-badge">{app.status}</span>
+                  </div>
                 </div>
+
+                {app.database && (
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginTop: '0.45rem',
+                      marginBottom: '0.15rem',
+                      background: app.database.includes('Data 1')
+                        ? 'rgba(16, 185, 129, 0.12)'
+                        : app.database.includes('Data 2')
+                        ? 'rgba(99, 102, 241, 0.12)'
+                        : 'rgba(148, 163, 184, 0.12)',
+                      color: app.database.includes('Data 1')
+                        ? '#10b981'
+                        : app.database.includes('Data 2')
+                        ? '#818cf8'
+                        : '#94a3b8',
+                      border: `1px solid ${
+                        app.database.includes('Data 1')
+                          ? 'rgba(16, 185, 129, 0.3)'
+                          : app.database.includes('Data 2')
+                          ? 'rgba(99, 102, 241, 0.3)'
+                          : 'rgba(148, 163, 184, 0.25)'
+                      }`,
+                    }}
+                  >
+                    <span>🗄️</span>
+                    <span>{app.database}</span>
+                  </div>
+                )}
 
                 {/* Manual Check Verification Bar */}
                 <div className="store-manual-check-bar">
@@ -631,8 +694,8 @@ export default function AppWallet() {
                 </p>
               </div>
 
-              {/* Card Footer: OPEN Button & Edit controls */}
-              <div className="store-card-footer">
+              {/* Card Footer: OPEN Button, SPECS Button & Edit controls */}
+              <div className="store-card-footer" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                 {app.frontendUrl ? (
                   <a
                     href={app.frontendUrl}
@@ -653,23 +716,45 @@ export default function AppWallet() {
                   </button>
                 )}
 
-                <div className="store-card-actions">
-                  {backlogCount > 0 && (
-                    <span className="store-backlog-chip" title={`${backlogCount} công việc backlog`}>
-                      {backlogCount} task
-                    </span>
-                  )}
+                <button
+                  type="button"
+                  onClick={() => setActiveModal({ type: 'view-spec', project: app, lang: 'vi' })}
+                  title="Xem Đặc Tả Kỹ Thuật (Specification)"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.3rem',
+                    padding: '0.45rem 0.65rem',
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    color: '#60a5fa',
+                    border: '1px solid rgba(59, 130, 246, 0.35)',
+                    borderRadius: '9999px',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span>📋</span>
+                  <span>SPECS</span>
+                </button>
 
-                  {canEdit && (
-                    <button
-                      className="store-icon-btn"
-                      onClick={() => handleOpenEditModal(app)}
-                      title="Chỉnh sửa / Quản lý"
-                    >
-                      <EditIcon size={14} />
-                    </button>
-                  )}
-                </div>
+                {backlogCount > 0 && (
+                  <span className="store-backlog-chip" title={`${backlogCount} công việc backlog`}>
+                    {backlogCount} task
+                  </span>
+                )}
+
+                {canEdit && (
+                  <button
+                    className="store-icon-btn"
+                    onClick={() => handleOpenEditModal(app)}
+                    title="Chỉnh sửa / Quản lý"
+                  >
+                    <EditIcon size={14} />
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -714,6 +799,19 @@ export default function AppWallet() {
                 onChange={(e) => setModalForm({ ...modalForm, category: e.target.value })}
                 placeholder="VD: Web App, AI Tool..."
               />
+            </div>
+
+            <div className="form-group">
+              <label>Database Supabase:</label>
+              <select
+                className="input-select"
+                value={modalForm.database || 'JH Supabase NoData'}
+                onChange={(e) => setModalForm({ ...modalForm, database: e.target.value })}
+              >
+                <option value="JH Supabase Data 1">JH Supabase Data 1</option>
+                <option value="JH Supabase Data 2">JH Supabase Data 2</option>
+                <option value="JH Supabase NoData">JH Supabase NoData</option>
+              </select>
             </div>
 
             <div className="form-group">
@@ -856,6 +954,74 @@ export default function AppWallet() {
                 Lưu
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Specification Viewer Modal */}
+      {activeModal?.type === 'view-spec' && activeModal.project && (
+        <Modal
+          title={`Đặc Tả Kỹ Thuật - ${activeModal.project.title}`}
+          onClose={() => setActiveModal(null)}
+          maxWidth="760px"
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={`btn ${activeModal.lang === 'vi' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setActiveModal({ ...activeModal, lang: 'vi' })}
+                style={{ fontSize: '0.8rem', padding: '5px 14px', borderRadius: '6px' }}
+              >
+                🇻🇳 Tiếng Việt
+              </button>
+              <button
+                type="button"
+                className={`btn ${activeModal.lang === 'en' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setActiveModal({ ...activeModal, lang: 'en' })}
+                style={{ fontSize: '0.8rem', padding: '5px 14px', borderRadius: '6px' }}
+              >
+                🇬🇧 English
+              </button>
+            </div>
+
+            {activeModal.project.frontendUrl && (
+              <a
+                href={activeModal.project.frontendUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '5px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '6px' }}
+              >
+                Mở Web App <ExternalLinkIcon size={12} />
+              </a>
+            )}
+          </div>
+
+          <div
+            style={{
+              maxHeight: '62vh',
+              overflowY: 'auto',
+              padding: '1.2rem',
+              background: 'rgba(15, 23, 42, 0.75)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontSize: '0.88rem',
+              lineHeight: 1.65,
+              color: '#cbd5e1',
+            }}
+          >
+            {activeModal.lang === 'en'
+              ? (activeModal.project.specEn || 'No English specification available for this project.')
+              : (activeModal.project.specVi || 'Chưa có đặc tả tiếng Việt cho dự án này.')}
+          </div>
+
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-secondary" onClick={() => setActiveModal(null)}>
+              Đóng
+            </button>
           </div>
         </Modal>
       )}

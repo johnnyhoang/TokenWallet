@@ -59,6 +59,7 @@ describe('mappers round-trips', () => {
       title: "JohnnyHoang's Wallet",
       frontendUrl: 'https://example.com',
       category: 'Web',
+      database: 'JH Supabase Data 1',
       status: 'Production',
       priority: 'High',
       description: 'Crypto wallet',
