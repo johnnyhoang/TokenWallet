@@ -42,15 +42,29 @@ export interface AITool {
 
 export interface AppProjectRow {
   id: string;
-  title?: string;
   name?: string;
+  title?: string;
   url?: string;
-  category?: string;
   type?: string;
+  category?: string;
   status?: string;
   priority?: string;
   description?: string;
+  tech_notes?: string;
   is_disabled?: boolean;
+  manual_checked?: boolean;
+  manual_checked_at?: string;
+  health_status?: string;
+  health_checked_at?: string;
+  last_updated?: number;
+}
+
+export interface AppProjectMeta {
+  isDisabled?: boolean;
+  manualChecked?: boolean;
+  manualCheckedAt?: string;
+  healthStatus?: 'healthy' | 'checking' | 'failed' | 'unknown';
+  healthCheckedAt?: string;
 }
 
 export interface AppProject {
@@ -62,7 +76,11 @@ export interface AppProject {
   priority: string;
   description?: string;
   isDisabled?: boolean;
+  techNotes?: string;
+  manualChecked?: boolean;
+  manualCheckedAt?: string;
   healthStatus?: 'healthy' | 'checking' | 'failed' | 'unknown';
+  healthCheckedAt?: string;
   backlog?: BacklogItem[];
 }
 
@@ -161,7 +179,48 @@ export function toolToRow(tool: AITool): ToolRow {
 }
 
 // Mappers: AppProject
+const META_PREFIX = '<!--CHECK_DATA:';
+const META_SUFFIX = '-->';
+
+export function parseTechNotesMeta(raw?: string | null): { cleanNotes: string; meta: AppProjectMeta } {
+  if (!raw) return { cleanNotes: '', meta: {} };
+  const startIdx = raw.indexOf(META_PREFIX);
+  if (startIdx === -1) {
+    return { cleanNotes: raw.trim(), meta: {} };
+  }
+  const endIdx = raw.indexOf(META_SUFFIX, startIdx);
+  if (endIdx === -1) {
+    return { cleanNotes: raw.trim(), meta: {} };
+  }
+  const jsonStr = raw.substring(startIdx + META_PREFIX.length, endIdx);
+  let meta: AppProjectMeta = {};
+  try {
+    meta = JSON.parse(jsonStr);
+  } catch {
+    meta = {};
+  }
+  const cleanNotes = (raw.substring(0, startIdx) + raw.substring(endIdx + META_SUFFIX.length)).trim();
+  return { cleanNotes, meta };
+}
+
+export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): string {
+  const notes = cleanNotes?.trim() || '';
+  if (!meta || (!meta.isDisabled && !meta.manualChecked && !meta.manualCheckedAt && !meta.healthStatus && !meta.healthCheckedAt)) {
+    return notes;
+  }
+  const metaPayload: AppProjectMeta = {};
+  if (meta.isDisabled !== undefined) metaPayload.isDisabled = meta.isDisabled;
+  if (meta.manualChecked !== undefined) metaPayload.manualChecked = meta.manualChecked;
+  if (meta.manualCheckedAt) metaPayload.manualCheckedAt = meta.manualCheckedAt;
+  if (meta.healthStatus && meta.healthStatus !== 'unknown') metaPayload.healthStatus = meta.healthStatus;
+  if (meta.healthCheckedAt) metaPayload.healthCheckedAt = meta.healthCheckedAt;
+
+  const metaStr = `${META_PREFIX}${JSON.stringify(metaPayload)}${META_SUFFIX}`;
+  return notes ? `${notes}\n${metaStr}` : metaStr;
+}
+
 export function rowToAppProject(row: AppProjectRow): AppProject {
+  const { cleanNotes, meta } = parseTechNotesMeta(row.tech_notes);
   return {
     id: row.id,
     title: row.name || row.title || 'Untitled App',
@@ -170,22 +229,34 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
     status: row.status || 'Development',
     priority: row.priority || 'Medium',
     description: row.description || undefined,
-    isDisabled: Boolean(row.is_disabled),
+    isDisabled: row.is_disabled !== undefined ? Boolean(row.is_disabled) : Boolean(meta.isDisabled),
+    techNotes: cleanNotes,
+    manualChecked: row.manual_checked !== undefined ? Boolean(row.manual_checked) : Boolean(meta.manualChecked),
+    manualCheckedAt: row.manual_checked_at || meta.manualCheckedAt,
+    healthStatus: (row.health_status || meta.healthStatus || 'unknown') as any,
+    healthCheckedAt: row.health_checked_at || meta.healthCheckedAt,
   };
 }
 
 export function appProjectToRow(project: AppProject): AppProjectRow {
+  const serializedNotes = serializeTechNotes(project.techNotes, {
+    isDisabled: project.isDisabled,
+    manualChecked: project.manualChecked,
+    manualCheckedAt: project.manualCheckedAt,
+    healthStatus: project.healthStatus,
+    healthCheckedAt: project.healthCheckedAt,
+  });
+
   return {
     id: project.id,
     name: project.title,
-    title: project.title,
     url: project.frontendUrl || '',
     type: project.category,
-    category: project.category,
     status: project.status,
     priority: project.priority,
     description: project.description || '',
-    is_disabled: Boolean(project.isDisabled),
+    tech_notes: serializedNotes,
+    last_updated: Date.now(),
   };
 }
 

@@ -53,7 +53,7 @@ describe('mappers round-trips', () => {
     });
   });
 
-  it('round-trips AppProject fully populated (including isDisabled)', () => {
+  it('round-trips AppProject fully populated (including isDisabled, manualChecked, and healthStatus)', () => {
     const project: AppProject = {
       id: 'app-1',
       title: "JohnnyHoang's Wallet",
@@ -63,6 +63,11 @@ describe('mappers round-trips', () => {
       priority: 'High',
       description: 'Crypto wallet',
       isDisabled: true,
+      techNotes: 'Vercel monorepo deployment',
+      manualChecked: true,
+      manualCheckedAt: '23/09/2026',
+      healthStatus: 'healthy',
+      healthCheckedAt: '23/09/2026 08:00',
     };
     const row = appProjectToRow(project);
     const restored = rowToAppProject(row);

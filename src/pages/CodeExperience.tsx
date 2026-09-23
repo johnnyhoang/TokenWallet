@@ -63,6 +63,7 @@ Hãy kiểm tra toàn bộ mã nguồn và cấu hình của dự án hiện t�
 ## 1. 🔑 Google Login & Supabase Auth Integration
 - [ ] Bật Google OAuth Provider trong Supabase Dashboard với Authorized Redirect URI \`https://<project-ref>.supabase.co/auth/v1/callback\`
 - [ ] Dùng Supabase Auth (\`@supabase/supabase-js\`) cho Google Login với \`VITE_SUPABASE_URL\` & \`VITE_SUPABASE_ANON_KEY\` nếu dùng Vite, hoặc \`NEXT_PUBLIC_SUPABASE_URL\` & \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` nếu code Next.js App Router
+- [ ] Cấu hình JWT Token Expired sau 1h (3600s) trong Supabase Dashboard (Auth -> JWT Expiry Limit) để đảm bảo an toàn và tự động refresh session
 - [ ] Nút login gọi \`signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })\`
 - [ ] Lắng nghe session thay đổi tự động qua \`supabase.auth.onAuthStateChange\`
 - [ ] Kiểm tra session trên mọi Protected Route trước khi render UI
@@ -86,8 +87,15 @@ Hãy kiểm tra toàn bộ mã nguồn và cấu hình của dự án hiện t�
 - [ ] Luôn truyền \`redirectTo: window.location.origin\` (hoặc exact callback path) khi gọi \`signInWithOAuth\`
 - [ ] Áp dụng RLS / App Scope Isolation (e.g., bảng \`user_app_access\`) nếu cần kiểm soát quyền mở từng app
 
-## 5. 💻 Local Dev với Remote Supabase DB
-- [ ] File \`.env.local\` ở máy cá nhân trỏ tới Remote Supabase Project (\`*.supabase.co\`)
+## 5. 💻 Cấu Hình & Environment Variables (Tối Thiểu Hóa & Chuẩn Bảo Mật)
+- [ ] **Tối thiểu hóa cấu hình:** Chỉ khai báo các biến môi trường thực sự cần thiết, tuyệt đối không tạo biến thừa
+- [ ] **Login Google qua Supabase:** Khai báo \`VITE_SUPABASE_URL\` & \`VITE_SUPABASE_ANON_KEY\` (Vite) hoặc \`NEXT_PUBLIC_SUPABASE_URL\` & \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` (Next.js)
+- [ ] **JWT Token Expired sau 1h:** Cấu hình thời hạn JWT token hết hạn sau 1h (3600s), xử lý auto refresh token
+- [ ] **Có đọc/lưu database trực tiếp:** Nếu app có đọc/lưu data ở Server/API/Node/Prisma/Drizzle, bổ sung \`DATABASE_URL\` (Postgres Pooling URL)
+- [ ] **Có AI Function:** Nếu app có tính năng AI, bổ sung đúng 2 API key: \`OPENAI_API_KEY\` và \`GEMINI_API_KEY\`
+- [ ] **Quy tắc bắt buộc:** Ngoài các cấu hình trên, BẮT BUỘC PHẢI HỎI Ý KIẾN NGƯỜI DÙNG trước khi thêm bất kỳ cấu hình hay biến môi trường nào khác
+- [ ] File \`.env.local\` ở máy cá nhân trỏ tới Remote Supabase Project (\`*.supabase.co\`), cấm commit \`.env\` / \`.env.local\` vào Git
+- [ ] Cung cấp đầy đủ file mẫu \`.env.example\` và \`.env.sample\` đồng bộ với cấu hình thực tế
 - [ ] Cấu hình CORS cho Backend API Express/NestJS cho phép origin \`http://localhost:<port>\` gọi API
 - [ ] Test quy trình Google Login tại Localhost quay về đúng domain local \`http://localhost:<port>\`
 
@@ -102,7 +110,7 @@ Hãy kiểm tra toàn bộ mã nguồn và cấu hình của dự án hiện t�
 - [ ] Đạt chuẩn TypeScript strict mode (noImplicitAny, strictNullChecks)
 - [ ] Sử dụng \`type-only imports\` khi bật \`verbatimModuleSyntax\`
 - [ ] Có Loading state và Error boundaries cho mọi async data fetch
-- [ ] Không commit file \`.env.local\` hoặc secret keys vào Git repository
+- [ ] Không commit file \`.env\`, \`.env.local\` hoặc secret keys vào Git repository; luôn duy trì file mẫu \`.env.example\` / \`.env.sample\` và khai báo \`.gitignore\` chuẩn
 
 ## 8. 🎲 Script Data Giả Lập (Mock Seed Data)
 - [ ] Tích hợp script seed database giả lập trong \`scripts/seed-mock-data.ts\` (hoặc SQL seed script)
@@ -141,10 +149,11 @@ Hãy kiểm tra toàn bộ mã nguồn và cấu hình của dự án hiện t�
       auditPrompt: `Dùng skill \`source-driven-development\` và \`security-and-hardening\` để audit và nâng cấp tích hợp Google OAuth + Supabase Auth trong ứng dụng này:
 
 1. Kiểm tra cấu hình \`supabaseClient\` trong \`utils/supabaseClient.ts\`: Bắt buộc dùng Supabase Auth (\`@supabase/supabase-js\`) cho Google Login với \`VITE_SUPABASE_URL\` & \`VITE_SUPABASE_ANON_KEY\` (nếu dùng Vite) hoặc \`NEXT_PUBLIC_SUPABASE_URL\` & \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` (nếu code Next.js App Router).
-2. Kiểm tra hàm \`signInWithOAuth\` trong AuthContext đã truyền \`provider: 'google'\` và \`options: { redirectTo: window.location.origin }\`.
-3. Kiểm tra tự động sync session qua \`supabase.auth.onAuthStateChange\` và bảo vệ Protected Routes.
-4. Kiểm tra Row Level Security (RLS) cho tất cả các bảng DB liên quan (\`auth.uid() = user_id\`).
-5. Cập nhật và nâng cấp mã nguồn nếu có bất kỳ điểm nào chưa chuẩn hoặc bị thiếu sót.`,
+2. Kiểm tra cấu hình JWT Token Expired sau 1h (3600s) trong Supabase Dashboard (Auth -> JWT Expiry Limit) và cơ chế tự động refresh session của SDK.
+3. Kiểm tra hàm \`signInWithOAuth\` trong AuthContext đã truyền \`provider: 'google'\` và \`options: { redirectTo: window.location.origin }\`.
+4. Kiểm tra tự động sync session qua \`supabase.auth.onAuthStateChange\` và bảo vệ Protected Routes.
+5. Kiểm tra Row Level Security (RLS) cho tất cả các bảng DB liên quan (\`auth.uid() = user_id\`).
+6. Cập nhật và nâng cấp mã nguồn nếu có bất kỳ điểm nào chưa chuẩn hoặc bị thiếu sót.`,
       content: (
         <div className="note-content">
           <h2>Google OAuth với Supabase Auth</h2>
@@ -618,29 +627,37 @@ CREATE POLICY "Check app access" ON app_data
     {
       id: 'local-dev-supabase',
       icon: '💻',
-      title: 'Chạy Local với Remote Supabase DB',
-      auditPrompt: `Dùng skill \`debugging-and-error-recovery\` và \`web-app-standards\` để audit và thiết lập môi trường Local Dev kết nối Remote Supabase DB:
+      title: 'Cấu Hình Env & Chạy Local với Supabase',
+      auditPrompt: `Dùng skill \`debugging-and-error-recovery\` và \`web-app-standards\` để audit và chuẩn hóa cấu hình & Environment Variables:
 
-1. Kiểm tra file \`.env.local\` đã khai báo đúng \`VITE_SUPABASE_URL\` và \`VITE_SUPABASE_ANON_KEY\` trỏ đến Remote Supabase Project (*.supabase.co).
-2. Kiểm tra cấu hình CORS ở Backend API Express/NestJS, đảm bảo origins \`http://localhost:<port>\` được phép gọi API.
-3. Test quy trình login Google tại Localhost, đảm bảo chuyển hướng quay về chính xác \`http://localhost:<port>\` không bị dạt về Production.
-4. Sửa chữa các lỗi kết nối hoặc cấu hình sai trong file \`.env.local\` / backend CORS middleware.`,
+1. Tối thiểu hóa cấu hình: Chỉ giữ đúng các biến môi trường cần thiết, loại bỏ toàn bộ config thừa hay boilerplate.
+2. Login Google qua Supabase: Khai báo đúng \`VITE_SUPABASE_URL\` & \`VITE_SUPABASE_ANON_KEY\` (Vite) hoặc \`NEXT_PUBLIC_SUPABASE_URL\` & \`NEXT_PUBLIC_SUPABASE_ANON_KEY\` (Next.js App Router).
+3. JWT token expired sau 1h (3600s): Cấu hình trong Supabase Auth Settings và kiểm tra SDK tự động refresh session.
+4. Đọc/lưu data trực tiếp: Nếu ứng dụng có đọc/lưu database trực tiếp ở Server/API/Node/Prisma/Drizzle, bổ sung thêm \`DATABASE_URL\` (Postgres connection pooler).
+5. Tính năng AI: Nếu ứng dụng có AI function, bổ sung đúng 2 API key: \`OPENAI_API_KEY\` và \`GEMINI_API_KEY\`.
+6. Quy tắc bắt buộc: Ngoài các cấu hình trên, BẮT BUỘC PHẢI HỎI Ý KIẾN NGƯỜI DÙNG trước khi thêm bất kỳ cấu hình hay biến môi trường nào khác.
+7. File \`.env.local\` cấm commit vào Git; luôn duy trì 2 file mẫu chuẩn \`.env.example\` & \`.env.sample\` và cấu hình \`.gitignore\` chuẩn.`,
       content: (
         <div className="note-content">
-          <h2>Chạy Mọi App Ở Localhost Vẫn Kết Nối Supabase Cloud</h2>
-          <p className="note-desc">Hướng dẫn cấu hình để tất cả dự án (React/Vite/Next.js/Express) chạy mượt mà ở máy cá nhân (Localhost) nhưng kết nối trực tiếp DB & Auth trên Supabase Cloud mà không lo lỗi CORS hay OAuth fail.</p>
+          <h2>Quy Chuẩn Cấu Hình &amp; Environment Variables (Tối Thiểu Hóa)</h2>
+          <p className="note-desc">Nguyên tắc cốt lõi: <strong>Tối thiểu hóa cấu hình</strong> — chỉ khai báo biến thực sự cần, không tạo biến dư thừa. Ngoài danh sách chuẩn, muốn thêm biến mới <strong>BẮT BUỘC PHẢI HỎI NGƯỜI DÙNG</strong>.</p>
 
-          <h3>Cấu Trúc Env File Chuẩn Cho Localhost</h3>
-          <p>Mỗi dự án cần file <code>.env.local</code> (không commit vào Git) để ghi đè các biến môi trường kết nối Supabase Cloud:</p>
+          <h3>Danh Mục Biến Môi Trường Tiêu Chuẩn</h3>
+          <p>Mỗi dự án cần file <code>.env.local</code> (không commit vào Git, luôn đi kèm <code>.env.example</code> &amp; <code>.env.sample</code>):</p>
 
-          <CodeBlock lang="bash" code={`# .env.local trong dự án Vite / React
-VITE_SUPABASE_URL=https://xzmqeibqvgrthuisghvu.supabase.co
+          <CodeBlock lang="bash" code={`# 1. Supabase Auth & Client (Google Login + JWT 1h Expiry)
+VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1Ni...
+# (Với Next.js: dùng NEXT_PUBLIC_SUPABASE_URL & NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-# .env.local trong dự án Node.js / Express Backend
-SUPABASE_URL=https://xzmqeibqvgrthuisghvu.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1Ni...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1Ni... # Dùng cho backend admin/cron job`} />
+# 2. Database Connection (CHỈ THÊM khi có đọc/lưu data trực tiếp ở Backend Server/ORM)
+DATABASE_URL=postgresql://postgres.xxxx:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+# 3. AI Functions (CHỈ THÊM khi có tính năng AI)
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=AIzaSy...
+
+# QUY TẮC: Cần thêm bất kỳ biến nào khác BẮT BUỘC PHẢI HỎI Ý KIẾN NGƯỜI DÙNG!`} />
 
           <h3>Bước 1 — Thêm Localhost Vào Whitelist Redirect URLs</h3>
           <Alert type="warn">Nếu quên bước này, khi ấn "Login Google" ở <code>localhost:5173</code>, trình duyệt sẽ bị chuyển hướng sang domain production thay vì ở lại localhost!</Alert>
@@ -944,10 +961,15 @@ Báo cáo danh sách các mục ĐẠT / CHƯA ĐẠT và tự động nâng c�
         <div className="note-content">
           <h2>Checklist Web App Production-Ready</h2>
 
-          <h3>🔐 Authentication</h3>
+          <h3>🔐 Authentication &amp; Environment Variables</h3>
           <div className="note-checklist">
             {[
-              'Dùng Supabase Auth (@supabase/supabase-js) cho Google Login với VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY (Vite) hoặc NEXT_PUBLIC_SUPABASE_URL & NEXT_PUBLIC_SUPABASE_ANON_KEY (Next.js App Router)',
+              'Tối thiểu hóa cấu hình: chỉ giữ biến cần thiết, cấm sinh biến thừa hay boilerplate',
+              'Login Google qua Supabase (@supabase/supabase-js) với VITE_ (Vite) hoặc NEXT_PUBLIC_ (Next.js App Router)',
+              'JWT Token Expired sau 1h (3600s) + cơ chế auto refresh session',
+              'Có đọc/lưu database trực tiếp: bổ sung DATABASE_URL (Postgres Pooling URL)',
+              'Có AI function: bổ sung đúng OPENAI_API_KEY và GEMINI_API_KEY',
+              'Ngoài danh sách trên, cần thêm cấu hình BẮT BUỘC PHẢI HỎI Ý KIẾN NGƯỜI DÙNG',
               'onAuthStateChange để sync session toàn app',
               'Redirect về đúng page sau login (redirectTo)',
               'Sign out xóa session + clear local state',
@@ -1000,7 +1022,7 @@ Báo cáo danh sách các mục ĐẠT / CHƯA ĐẠT và tự động nâng c�
               'type-only imports khi dùng verbatimModuleSyntax',
               'Error boundaries cho React',
               'Loading + empty states cho mọi async data',
-              '.env.example commit vào repo (không commit .env.local)',
+              '.env.example / .env.sample commit vào repo; .gitignore chặn mọi file .env*.local và secret keys',
             ].map(item => <label key={item} className="checklist-item"><input type="checkbox" /><span>{item}</span></label>)}
           </div>
 

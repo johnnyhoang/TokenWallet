@@ -16,6 +16,7 @@ This skill provides the mandatory architectural patterns, security standards, lo
 
 ### Authentication Architecture
 - **Auth Broker:** Dùng Supabase Auth (`@supabase/supabase-js`) cho Google Login với `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY` (nếu dùng Vite) hoặc `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` (nếu dùng Next.js App Router). Frontend apps không bao giờ lưu trữ hoặc xử lý mật khẩu thô.
+- **JWT Token Expiry (1h):** Cấu hình thời hạn JWT Access Token hết hạn sau 1h (3600s) trong Supabase Dashboard (Authentication → Settings → JWT Expiry Limit = 3600), SDK tự động xử lý refresh token ngầm mượt mà.
 - **Provider Setup:**
   - Google Cloud Console: OAuth 2.0 Web Client ID.
   - Authorized Redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
@@ -160,11 +161,20 @@ When multiple apps share one Supabase Auth instance, Supabase falls back to the 
 
 ---
 
-## 💻 5. Local Development with Remote Supabase Cloud DB
+## 💻 5. Quy Chuẩn Cấu Hình & Environment Variables (Tối Thiểu Hóa)
+
+### 6 Nguyên Tắc Cấu Hình Bắt Buộc
+1. **Tối thiểu hóa cấu hình:** Chỉ khai báo những biến môi trường thực sự cần thiết, loại bỏ triệt để biến thừa hay boilerplate không dùng đến.
+2. **Login Google qua Supabase:** Khai báo `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY` (cho Vite) hoặc `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` (cho Next.js App Router).
+3. **JWT Token Expired sau 1h:** Cấu hình JWT Expiry Limit = 3600s trong Supabase Auth Settings, SDK tự động refresh session.
+4. **Có đọc/lưu data trực tiếp:** Nếu ứng dụng có đọc/lưu database trực tiếp ở Server/API/Node/Prisma/Drizzle, bổ sung thêm `DATABASE_URL` (Postgres Pooling URL). Frontend query qua Supabase Client chỉ cần URL & ANON KEY.
+5. **Có AI Function:** Nếu ứng dụng có tính năng AI, bổ sung đúng 2 API key: `OPENAI_API_KEY` và `GEMINI_API_KEY`.
+6. **QUY TẮC BẮT BUỘC — HỎI TRƯỚC KHI THÊM CẤU HÌNH:** Ngoài các cấu hình trên, bất kỳ khi nào cần thêm cấu hình hay biến môi trường mới, **BẮT BUỘC PHẢI HỎI Ý KIẾN NGƯỜI DÙNG** trước khi thêm!
 
 ### Configuration Pattern
-- Place `.env.local` files in local project roots (never check `.env.local` into Git).
-- Frontend variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+- Place `.env.local` files in local project roots (never check `.env` or `.env.local` into Git).
+- Maintain clean template files: `.env.example` and `.env.sample` committed to Git.
+- `.gitignore` MUST block all `.env`, `.env.*` while strictly whitelisting `!.env.example` and `!.env.sample`.
 - Backend CORS setup for local Express/NestJS APIs:
   ```typescript
   import cors from 'cors';
@@ -284,7 +294,8 @@ When refactoring UI for production applications using the `frontend-design` skil
 
 When auditing or reviewing code for any project in `D:\Hoa Hoang\Apps`, verify compliance against this checklist:
 
-- [ ] **Google OAuth & Supabase Auth:** Dùng Supabase Auth (`@supabase/supabase-js`) cho Google Login với `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY` (nếu dùng Vite) hoặc `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` (nếu code Next.js App Router), provider configured, `signInWithOAuth` uses `window.location.origin`, RLS active on user tables.
+- [ ] **Google OAuth & Supabase Auth:** Dùng Supabase Auth (`@supabase/supabase-js`) cho Google Login với `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY` (Vite) hoặc `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Next.js), JWT token expired sau 1h (3600s), `signInWithOAuth` dùng `window.location.origin`, RLS active on user tables.
+- [ ] **Tối Thiểu Hóa Cấu Hình & Env Rules:** Chỉ khai báo biến cần thiết; có đọc/lưu DB trực tiếp thì thêm `DATABASE_URL`; có AI function thì thêm `OPENAI_API_KEY` & `GEMINI_API_KEY`; NGOÀI RA CẦN THÊM CẤU HÌNH GÌ PHẢI HỎI Ý KIẾN NGƯỜI DÙNG; `.gitignore` chặn mọi `.env*` (trừ `!.env.example` và `!.env.sample`), duy trì cả 2 file mẫu `.env.example` & `.env.sample`.
 - [ ] **Monorepo & Vercel:** Correct Root Directory set per Vercel Project, frontend env vars use `VITE_` / `NEXT_PUBLIC_`.
 - [ ] **Fixed Local Ports:** Port assigned from allocation table with `strictPort: true` in `vite.config.ts` or `-p <port>` in Next.js.
 - [ ] **Auth Isolation:** Sub-app origin registered in Supabase Auth Whitelist, `redirectTo` explicitly passed.

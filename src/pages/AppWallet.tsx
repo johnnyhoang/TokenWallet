@@ -159,7 +159,7 @@ export default function AppWallet() {
   const apps: AppProject[] = useMemo(() => {
     return projectItems.map((p) => ({
       ...p,
-      healthStatus: healthMap[p.id] || 'unknown',
+      healthStatus: healthMap[p.id] || p.healthStatus || 'unknown',
       backlog: backlogItems.filter((b) => b.projectId === p.id),
     }));
   }, [projectItems, backlogItems, healthMap]);
@@ -178,37 +178,100 @@ export default function AppWallet() {
     return apps.filter((a) => a.healthStatus === 'healthy').length;
   }, [apps]);
 
-  // Manual Concurrency-Capped Health Checker (Max 5 concurrent)
+  // Manual Concurrency-Capped Health Checker (Max 5 concurrent) - Saves results to Supabase!
   const handleCheckHealthAll = async () => {
     setIsCheckingHealth(true);
 
     const targets = apps.filter((a) => a.frontendUrl);
     const limit = 5;
+    const nowTimeStr = new Date().toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
     for (let i = 0; i < targets.length; i += limit) {
       const batch = targets.slice(i, i + limit);
       await Promise.all(
         batch.map(async (app) => {
           setHealthMap((prev) => ({ ...prev, [app.id]: 'checking' }));
+          let status: 'healthy' | 'failed' = 'failed';
           try {
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(app.frontendUrl!)}`;
             const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(9000) });
-            if (!res.ok) {
-              setHealthMap((prev) => ({ ...prev, [app.id]: 'failed' }));
-              return;
+            if (res.ok) {
+              const data = await res.json();
+              const httpCode = data.status?.http_code;
+              status = interpretHealth(httpCode) === 'healthy' ? 'healthy' : 'failed';
             }
-            const data = await res.json();
-            const httpCode = data.status?.http_code;
-            const status = interpretHealth(httpCode);
-            setHealthMap((prev) => ({ ...prev, [app.id]: status }));
           } catch {
-            setHealthMap((prev) => ({ ...prev, [app.id]: 'failed' }));
+            status = 'failed';
+          }
+          setHealthMap((prev) => ({ ...prev, [app.id]: status }));
+
+          // Save check result directly down to Supabase DB so it persists upon refresh!
+          try {
+            const updatedApp: AppProject = {
+              ...app,
+              healthStatus: status,
+              healthCheckedAt: nowTimeStr,
+            };
+            const row = appProjectToRow(updatedApp);
+            await supabase.from('tkw_app_projects').update(row).eq('id', app.id);
+            setProjectItems((prev) =>
+              prev.map((p) =>
+                p.id === app.id ? { ...p, healthStatus: status, healthCheckedAt: nowTimeStr } : p
+              )
+            );
+          } catch (dbErr) {
+            console.error('Lỗi lưu kết quả kiểm tra health:', dbErr);
           }
         })
       );
     }
 
     setIsCheckingHealth(false);
+  };
+
+  // Toggle user manual verification with date stamp
+  const handleToggleManualCheck = async (app: AppProject) => {
+    const nextChecked = !app.manualChecked;
+    const nextCheckedAt = nextChecked
+      ? new Date().toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
+      : '';
+
+    // Optimistically update state
+    setProjectItems((prev) =>
+      prev.map((p) =>
+        p.id === app.id
+          ? { ...p, manualChecked: nextChecked, manualCheckedAt: nextCheckedAt }
+          : p
+      )
+    );
+
+    // Save directly to Supabase DB
+    try {
+      const updatedApp: AppProject = {
+        ...app,
+        manualChecked: nextChecked,
+        manualCheckedAt: nextCheckedAt,
+      };
+      const row = appProjectToRow(updatedApp);
+      const { error: upErr } = await supabase.from('tkw_app_projects').update(row).eq('id', app.id);
+      if (upErr) {
+        console.error('Lỗi lưu xác nhận kiểm tra:', upErr);
+        alert('Không thể lưu trạng thái xác nhận: ' + upErr.message);
+      }
+    } catch (err: any) {
+      console.error('Lỗi lưu xác nhận:', err);
+      alert('Không thể lưu trạng thái xác nhận: ' + (err?.message || 'Lỗi không xác định'));
+    }
   };
 
   const handleOpenEditModal = (project?: AppProject) => {
@@ -226,6 +289,8 @@ export default function AppWallet() {
         priority: 'Medium',
         description: '',
         isDisabled: false,
+        manualChecked: false,
+        manualCheckedAt: '',
       });
       setModalBacklog([]);
     }
@@ -246,7 +311,20 @@ export default function AppWallet() {
         priority: modalForm.priority || 'Medium',
         description: modalForm.description || '',
         isDisabled: Boolean(modalForm.isDisabled),
+        techNotes: modalForm.techNotes || activeModal.project.techNotes,
+        manualChecked: modalForm.manualChecked !== undefined ? modalForm.manualChecked : activeModal.project.manualChecked,
+        manualCheckedAt: modalForm.manualCheckedAt || activeModal.project.manualCheckedAt,
+        healthStatus: modalForm.healthStatus || activeModal.project.healthStatus,
+        healthCheckedAt: modalForm.healthCheckedAt || activeModal.project.healthCheckedAt,
       };
+
+      // Direct save to Supabase
+      const row = appProjectToRow(updatedProject as AppProject);
+      const { error: saveErr } = await supabase.from('tkw_app_projects').upsert(row);
+      if (saveErr) {
+        alert('Lỗi lưu vào Supabase: ' + saveErr.message);
+        return;
+      }
 
       setProjectItems((prev) => prev.map((p) => (p.id === projectId ? updatedProject : p)));
 
@@ -256,6 +334,11 @@ export default function AppWallet() {
 
       if (deletedIds.length > 0) {
         await supabase.from('tkw_app_backlog_items').delete().in('id', deletedIds);
+      }
+
+      if (modalBacklog.length > 0) {
+        const backlogRows = modalBacklog.map((b) => backlogItemToRow(b, projectId));
+        await supabase.from('tkw_app_backlog_items').upsert(backlogRows);
       }
 
       setBacklogItems((prev) => [
@@ -274,7 +357,23 @@ export default function AppWallet() {
         priority: modalForm.priority || 'Medium',
         description: modalForm.description || '',
         isDisabled: Boolean(modalForm.isDisabled),
+        techNotes: modalForm.techNotes || '',
+        manualChecked: Boolean(modalForm.manualChecked),
+        manualCheckedAt: modalForm.manualCheckedAt || '',
+        healthStatus: 'unknown',
       };
+
+      const row = appProjectToRow(newProj as AppProject);
+      const { error: saveErr } = await supabase.from('tkw_app_projects').upsert(row);
+      if (saveErr) {
+        alert('Lỗi thêm dự án vào Supabase: ' + saveErr.message);
+        return;
+      }
+
+      if (modalBacklog.length > 0) {
+        const backlogRows = modalBacklog.map((b) => backlogItemToRow(b, projectId));
+        await supabase.from('tkw_app_backlog_items').upsert(backlogRows);
+      }
 
       setProjectItems((prev) => [newProj, ...prev]);
       setBacklogItems((prev) => [
@@ -462,10 +561,12 @@ export default function AppWallet() {
 
                 {/* Status Bar: Health dot + Status badge */}
                 <div className="store-card-status-bar">
-                  <div className="store-health-tag">
+                  <div
+                    className="store-health-tag"
+                    title={app.healthCheckedAt ? `Kiểm tra tự động lúc: ${app.healthCheckedAt}` : 'Chưa kiểm tra tự động'}
+                  >
                     <span
                       className={`store-health-dot ${app.healthStatus || 'unknown'}`}
-                      title={`Health status: ${app.healthStatus}`}
                     />
                     <span>
                       {app.healthStatus === 'healthy'
@@ -479,6 +580,35 @@ export default function AppWallet() {
                   </div>
 
                   <span className="store-status-badge">{app.status}</span>
+                </div>
+
+                {/* Manual Check Verification Bar */}
+                <div className="store-manual-check-bar">
+                  <button
+                    type="button"
+                    className={`store-manual-check-btn ${app.manualChecked ? 'checked' : 'uncheck'}`}
+                    onClick={() => canEdit && handleToggleManualCheck(app)}
+                    disabled={!canEdit}
+                    title={
+                      canEdit
+                        ? (app.manualChecked ? 'Bấm để hủy hoặc cập nhật ngày xác nhận' : 'Bấm để xác nhận bạn đã kiểm tra ứng dụng')
+                        : 'Trạng thái xác nhận kiểm tra'
+                    }
+                  >
+                    <span className="check-indicator">{app.manualChecked ? '✓' : '○'}</span>
+                    <span className="check-text">
+                      {app.manualChecked ? (
+                        <>
+                          <span className="check-label">Đã check</span>
+                          {app.manualCheckedAt && (
+                            <span className="check-date">• {app.manualCheckedAt}</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="check-prompt">Xác nhận đã check</span>
+                      )}
+                    </span>
+                  </button>
                 </div>
 
                 {/* Description */}
@@ -596,6 +726,43 @@ export default function AppWallet() {
               onChange={(e) => setModalForm({ ...modalForm, frontendUrl: e.target.value })}
               placeholder="https://example.com"
             />
+          </div>
+
+          <div className="form-row" style={{ marginTop: '1rem', alignItems: 'center' }}>
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <input
+                type="checkbox"
+                id="modal-manual-check"
+                checked={Boolean(modalForm.manualChecked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setModalForm({
+                    ...modalForm,
+                    manualChecked: checked,
+                    manualCheckedAt: checked
+                      ? (modalForm.manualCheckedAt || new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }))
+                      : '',
+                  });
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label htmlFor="modal-manual-check" style={{ cursor: 'pointer', marginBottom: 0, fontWeight: 600 }}>
+                Xác nhận đã check tay
+              </label>
+            </div>
+
+            {modalForm.manualChecked && (
+              <div className="form-group">
+                <label>Ngày check:</label>
+                <input
+                  type="text"
+                  className="input-text"
+                  value={modalForm.manualCheckedAt || ''}
+                  onChange={(e) => setModalForm({ ...modalForm, manualCheckedAt: e.target.value })}
+                  placeholder="VD: 23/09/2026"
+                />
+              </div>
+            )}
           </div>
 
           <div className="form-group" style={{ marginTop: '1rem' }}>
