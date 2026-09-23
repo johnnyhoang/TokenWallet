@@ -68,6 +68,7 @@ export interface AppProjectMeta {
   healthCheckedAt?: string;
   specVi?: string;
   specEn?: string;
+  specUpdatedAt?: string;
 }
 
 export interface AppProject {
@@ -87,6 +88,7 @@ export interface AppProject {
   healthCheckedAt?: string;
   specVi?: string;
   specEn?: string;
+  specUpdatedAt?: string;
   backlog?: BacklogItem[];
 }
 
@@ -222,6 +224,7 @@ export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): 
   if (meta.healthCheckedAt) metaPayload.healthCheckedAt = meta.healthCheckedAt;
   if (meta.specVi) metaPayload.specVi = meta.specVi;
   if (meta.specEn) metaPayload.specEn = meta.specEn;
+  if (meta.specUpdatedAt) metaPayload.specUpdatedAt = meta.specUpdatedAt;
 
   const metaStr = `${META_PREFIX}${JSON.stringify(metaPayload)}${META_SUFFIX}`;
   return notes ? `${notes}\n${metaStr}` : metaStr;
@@ -246,6 +249,7 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
     healthCheckedAt: row.health_checked_at || meta.healthCheckedAt,
     specVi: meta.specVi || undefined,
     specEn: meta.specEn || undefined,
+    specUpdatedAt: meta.specUpdatedAt || undefined,
   };
 }
 
@@ -258,6 +262,7 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
     healthCheckedAt: project.healthCheckedAt,
     specVi: project.specVi,
     specEn: project.specEn,
+    specUpdatedAt: project.specUpdatedAt,
   });
 
   return {

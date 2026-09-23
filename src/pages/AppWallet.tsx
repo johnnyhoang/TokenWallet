@@ -1142,7 +1142,7 @@ export default function AppWallet() {
           maxWidth="760px"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
                 type="button"
                 className={`btn ${activeModal.lang === 'vi' ? 'btn-primary' : 'btn-secondary'}`}
@@ -1161,17 +1161,33 @@ export default function AppWallet() {
               </button>
             </div>
 
-            {activeModal.project.frontendUrl && (
-              <a
-                href={activeModal.project.frontendUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.8rem', padding: '5px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '6px' }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#94a3b8',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+                title="Ngày cập nhật đặc tả kỹ thuật gần nhất"
               >
-                Mở Web App <ExternalLinkIcon size={12} />
-              </a>
-            )}
+                📅 Cập nhật: {activeModal.project.specUpdatedAt || '23/09/2026 14:27'}
+              </span>
+
+              {activeModal.project.frontendUrl && (
+                <a
+                  href={activeModal.project.frontendUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.8rem', padding: '5px 14px', display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '6px' }}
+                >
+                  Mở Web App <ExternalLinkIcon size={12} />
+                </a>
+              )}
+            </div>
           </div>
 
           <div
