@@ -25,8 +25,8 @@ export function Modal({ title, onClose, maxWidth = '500px', children }: ModalPro
       >
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="close-btn" onClick={onClose} title="Đóng">
-            &times;
+          <button className="close-btn" onClick={onClose} title="Đóng" type="button">
+            ✕
           </button>
         </div>
         <div className="modal-body">{children}</div>
