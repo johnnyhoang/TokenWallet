@@ -17,6 +17,9 @@ export default function App() {
             {/* App Wallet — public read */}
             <Route index element={<AppWallet />} />
             <Route path="app-wallet" element={<AppWallet />} />
+            <Route path="app-wallet/:appId" element={<AppWallet />} />
+            <Route path="apps/:appId" element={<AppWallet />} />
+            <Route path="app/:appId" element={<AppWallet />} />
             <Route path="code-experience" element={<AppWallet />} />
             <Route path="notes" element={<AppWallet />} />
 

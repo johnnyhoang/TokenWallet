@@ -46,7 +46,7 @@ export default function Layout() {
                 to="/payments"
                 className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               >
-                Hạn thanh toán
+                Payment Schedule
               </NavLink>
             )}
           </div>
@@ -74,21 +74,21 @@ export default function Layout() {
                   {isAdmin && <span className="auth-crown" title="Admin">👑</span>}
                 </div>
                 <span className="auth-name">{displayName}</span>
-                <button className="btn btn-signout" onClick={signOut} title="Đăng xuất">
+                <button className="btn btn-signout" onClick={signOut} title="Sign Out">
                   ↩
                 </button>
               </div>
             ) : (
               <button className="btn btn-google-small" onClick={signInWithGoogle}>
                 <GoogleIcon />
-                Đăng nhập
+                Sign In
               </button>
             )
           )}
         </div>
       </header>
 
-      <Suspense fallback={<div className="protected-spinner">Đang tải trang...</div>}>
+      <Suspense fallback={<div className="protected-spinner">Loading page...</div>}>
         <Outlet />
       </Suspense>
 

@@ -27,9 +27,9 @@ export const AccountCard = React.memo(function AccountCard({
           <span className="account-email">{account.email}</span>
           {account.isDisabled && <span className="badge badge-secondary">Disabled</span>}
           {isRunOut ? (
-            <span className="badge badge-danger">Hết Token</span>
+            <span className="badge badge-danger">Exhausted</span>
           ) : (
-            <span className="badge badge-success">Hoạt động</span>
+            <span className="badge badge-success">Active</span>
           )}
         </div>
         {canEdit && (
@@ -37,7 +37,7 @@ export const AccountCard = React.memo(function AccountCard({
             className="btn btn-small"
             onClick={() => onOpenManageModal(account, tool)}
           >
-            Quản lý
+            Manage
           </button>
         )}
       </div>
@@ -53,7 +53,7 @@ export const AccountCard = React.memo(function AccountCard({
 
         {account.nextDueDate && (
           <div className="account-meta">
-            <span>Hạn reset/gia hạn: {formatResetTime(account.nextDueDate)}</span>
+            <span>Reset / Renewal Due: {formatResetTime(account.nextDueDate)}</span>
           </div>
         )}
 

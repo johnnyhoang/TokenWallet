@@ -51,6 +51,10 @@ export interface AppProjectRow {
   status?: string;
   priority?: string;
   description?: string;
+  developer?: string;
+  github?: string;
+  hosting?: string;
+  tech_stack?: string;
   tech_notes?: string;
   is_disabled?: boolean;
   manual_checked?: boolean;
@@ -61,6 +65,10 @@ export interface AppProjectRow {
 }
 
 export interface AppProjectMeta {
+  author?: string;
+  github?: string;
+  hosting?: string;
+  techStack?: string;
   isDisabled?: boolean;
   manualChecked?: boolean;
   manualCheckedAt?: string;
@@ -80,6 +88,10 @@ export interface AppProject {
   status: string;
   priority: string;
   description?: string;
+  author?: string;
+  github?: string;
+  hosting?: string;
+  techStack?: string;
   isDisabled?: boolean;
   techNotes?: string;
   manualChecked?: boolean;
@@ -217,6 +229,10 @@ export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): 
     return notes;
   }
   const metaPayload: AppProjectMeta = {};
+  if (meta.author) metaPayload.author = meta.author;
+  if (meta.github) metaPayload.github = meta.github;
+  if (meta.hosting) metaPayload.hosting = meta.hosting;
+  if (meta.techStack) metaPayload.techStack = meta.techStack;
   if (meta.isDisabled !== undefined) metaPayload.isDisabled = meta.isDisabled;
   if (meta.manualChecked !== undefined) metaPayload.manualChecked = meta.manualChecked;
   if (meta.manualCheckedAt) metaPayload.manualCheckedAt = meta.manualCheckedAt;
@@ -241,6 +257,10 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
     status: row.status || 'Development',
     priority: row.priority || 'Medium',
     description: row.description || undefined,
+    author: row.developer || meta.author || 'johnnyhoang',
+    github: row.github || meta.github || undefined,
+    hosting: row.hosting || meta.hosting || 'Vercel',
+    techStack: row.tech_stack || meta.techStack || undefined,
     isDisabled: row.is_disabled !== undefined ? Boolean(row.is_disabled) : Boolean(meta.isDisabled),
     techNotes: cleanNotes,
     manualChecked: row.manual_checked !== undefined ? Boolean(row.manual_checked) : Boolean(meta.manualChecked),
@@ -255,6 +275,10 @@ export function rowToAppProject(row: AppProjectRow): AppProject {
 
 export function appProjectToRow(project: AppProject): AppProjectRow {
   const serializedNotes = serializeTechNotes(project.techNotes, {
+    author: project.author,
+    github: project.github,
+    hosting: project.hosting,
+    techStack: project.techStack,
     isDisabled: project.isDisabled,
     manualChecked: project.manualChecked,
     manualCheckedAt: project.manualCheckedAt,
@@ -274,6 +298,10 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
     status: project.status,
     priority: project.priority,
     description: project.description || '',
+    developer: project.author || undefined,
+    github: project.github || undefined,
+    hosting: project.hosting || undefined,
+    tech_stack: project.techStack || undefined,
     tech_notes: serializedNotes,
     last_updated: Date.now(),
   };

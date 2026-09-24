@@ -23,7 +23,7 @@ interface ToolbarProps {
 export const Toolbar = React.memo(function Toolbar({
   searchQuery,
   onSearchChange,
-  searchPlaceholder = 'Tìm kiếm...',
+  searchPlaceholder = 'Search...',
   filters = [],
   sortBy,
   onSortByChange,
@@ -77,7 +77,7 @@ export const Toolbar = React.memo(function Toolbar({
 
         {onClearFilters && (
           <button className="btn btn-secondary btn-small" onClick={onClearFilters}>
-            Xóa bộ lọc
+            Clear Filters
           </button>
         )}
       </div>

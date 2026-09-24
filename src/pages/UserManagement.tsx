@@ -18,12 +18,12 @@ interface ManagedUser {
 }
 
 const PERMISSION_COLS: { key: keyof UserPermissions; label: string }[] = [
-  { key: 'can_read_token_wallet', label: 'Đọc Token Wallet' },
-  { key: 'can_edit_token_wallet', label: 'Sửa Token Wallet' },
-  { key: 'can_read_payments', label: 'Đọc Hạn TT' },
-  { key: 'can_edit_payments', label: 'Sửa Hạn TT' },
-  { key: 'can_read_app_wallet', label: 'Đọc App Wallet' },
-  { key: 'can_edit_app_wallet', label: 'Sửa App Wallet' },
+  { key: 'can_read_token_wallet', label: 'Read Token Wallet' },
+  { key: 'can_edit_token_wallet', label: 'Edit Token Wallet' },
+  { key: 'can_read_payments', label: 'Read Payments' },
+  { key: 'can_edit_payments', label: 'Edit Payments' },
+  { key: 'can_read_app_wallet', label: 'Read App Wallet' },
+  { key: 'can_edit_app_wallet', label: 'Edit App Wallet' },
 ];
 
 export default function UserManagement() {
@@ -77,7 +77,7 @@ export default function UserManagement() {
     return (
       <div className="protected-wall">
         <div className="protected-wall-icon">🚫</div>
-        <h2>Không có quyền truy cập</h2>
+        <h2>Access Denied</h2>
       </div>
     );
   }
@@ -85,16 +85,16 @@ export default function UserManagement() {
   return (
     <div className="user-mgmt-container" style={{ padding: '0.25rem 0' }}>
       <div className="user-mgmt-header" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Quản lý người dùng & phân quyền</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>User Management & RBAC Permissions</h3>
         <button className="btn btn-secondary" onClick={loadUsers} style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem' }}>
-          🔄 Làm mới
+          🔄 Refresh
         </button>
       </div>
 
       {isLoading ? (
         <div className="protected-loading" style={{ padding: '2rem 0' }}>
           <div className="protected-spinner" />
-          <p>Đang tải danh sách người dùng...</p>
+          <p>Loading user list...</p>
         </div>
       ) : (
         <div className="user-mgmt-table-wrap" style={{ maxHeight: '380px', overflowY: 'auto' }}>
@@ -119,7 +119,7 @@ export default function UserManagement() {
                     <button
                       className={`role-badge ${u.role === 'admin' ? 'role-admin' : 'role-user'}`}
                       onClick={() => toggleRole(u)}
-                      title="Nhấn để đổi role"
+                      title="Click to toggle role"
                     >
                       {u.role === 'admin' ? '👑 Admin' : '👤 User'}
                     </button>
@@ -140,7 +140,7 @@ export default function UserManagement() {
               {users.length === 0 && (
                 <tr>
                   <td colSpan={2 + PERMISSION_COLS.length} style={{ textAlign: 'center', opacity: 0.5, padding: '1.5rem' }}>
-                    Chưa có người dùng nào trong hệ thống.
+                    No users found in database.
                   </td>
                 </tr>
               )}

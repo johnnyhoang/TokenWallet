@@ -142,14 +142,14 @@ export default function PaymentSchedule() {
 
   // Quick Action: Explicit Delete
   const handleDeleteItem = async (id: string) => {
-    if (window.confirm('Bạn có chắc muốn xóa lịch nhắc thanh toán này không?')) {
+    if (window.confirm('Are you sure you want to delete this payment reminder?')) {
       try {
         const { error } = await supabase.from('tkw_payment_schedules').delete().eq('id', id);
         if (error) throw error;
         setSchedules(prev => prev.filter(s => s.id !== id));
         if (modalItem) setModalItem(null);
       } catch (err: any) {
-        alert('Không thể xóa item: ' + (err?.message || 'Lỗi DB'));
+        alert('Could not delete item: ' + (err?.message || 'DB Error'));
       }
     }
   };
@@ -240,12 +240,12 @@ export default function PaymentSchedule() {
 
   const getRecurrenceLabel = (rec: string) => {
     switch (rec) {
-      case 'monthly': return 'Hàng tháng';
-      case 'yearly': return 'Hàng năm';
-      case 'weekly': return 'Hàng tuần';
-      case 'daily': return 'Hàng ngày';
-      case 'one-time': return 'Một lần';
-      default: return 'Định kỳ';
+      case 'monthly': return 'Monthly';
+      case 'yearly': return 'Yearly';
+      case 'weekly': return 'Weekly';
+      case 'daily': return 'Daily';
+      case 'one-time': return 'One-time';
+      default: return 'Recurring';
     }
   };
 
@@ -253,16 +253,16 @@ export default function PaymentSchedule() {
     <div className="payment-schedule-page" style={{ maxWidth: '1400px', margin: '0 auto' }}>
       {dbSyncError && (
         <div className="banner banner-error" style={{ marginBottom: '1rem', padding: '0.75rem', background: '#fee2e2', color: '#991b1b', borderRadius: '6px' }}>
-          <strong>Lỗi đồng bộ:</strong> {dbSyncError}
+          <strong>Sync Error:</strong> {dbSyncError}
         </div>
       )}
 
       {/* Header & Quick Input Box */}
       <div className="pay-unified-box">
         <div className="pay-unified-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3>Hạn thanh toán & Nhắc nhở định kỳ</h3>
+          <h3>Payment Schedule & Recurring Reminders</h3>
           <button className="btn btn-primary" onClick={() => handleOpenEditModal()}>
-            + Tạo Nhắc Nhở Mới
+            + Create New Reminder
           </button>
         </div>
 
@@ -272,13 +272,13 @@ export default function PaymentSchedule() {
             type="text"
             className="input-field"
             style={{ flex: 1 }}
-            placeholder="Ví dụ: nhắc thanh toán Gemini account cho khoang4@kent.edu từ ngày 15/09/2026, lặp lại hàng tháng, 12 lần, 500k"
+            placeholder="e.g.: remind payment for Gemini account user@example.com from 15/10/2026, monthly, 12 times, 500k VND"
             value={quickInputText}
             onChange={(e) => setQuickInputText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
           />
           <button className="btn btn-primary" onClick={handleQuickAdd} disabled={!parsedPreview.title.trim()}>
-            Tạo nhắc nhở
+            Add Reminder
           </button>
         </div>
       </div>
@@ -288,13 +288,13 @@ export default function PaymentSchedule() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Dịch vụ</th>
-              <th>Email tài khoản</th>
-              <th>Ngày đến hạn</th>
-              <th>Chu kỳ</th>
-              <th>Số tiền</th>
-              <th>Phương thức</th>
-              <th>Thao tác</th>
+              <th>Service / Item</th>
+              <th>Account Email</th>
+              <th>Due Date</th>
+              <th>Recurrence</th>
+              <th>Amount</th>
+              <th>Payment Method</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -308,20 +308,20 @@ export default function PaymentSchedule() {
                 <td>{formatDateDisplay(item.dueDate)}</td>
                 <td>{getRecurrenceLabel(item.recurrence)}</td>
                 <td>{formatMoney(item.amount, item.currency)}</td>
-                <td>{item.paymentMethod || (item.isAutoDebit ? 'Tự động' : 'Thủ công')}</td>
+                <td>{item.paymentMethod || (item.isAutoDebit ? 'Auto Debit' : 'Manual')}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <button className="btn btn-small" onClick={() => handleMarkAsPaid(item)}>
-                      ✓ Đã trả
+                      ✓ Paid
                     </button>
                     <button className="btn btn-small btn-secondary" onClick={() => handleTogglePause(item)}>
-                      {item.isPaused ? 'Tiếp tục' : 'Tạm dừng'}
+                      {item.isPaused ? 'Resume' : 'Pause'}
                     </button>
                     <button className="btn btn-small" onClick={() => handleOpenEditModal(item)}>
-                      Sửa
+                      Edit
                     </button>
                     <button className="btn btn-small btn-danger" onClick={() => handleDeleteItem(item.id)}>
-                      Xóa
+                      Delete
                     </button>
                   </div>
                 </td>
@@ -330,7 +330,7 @@ export default function PaymentSchedule() {
             {schedules.length === 0 && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  Chưa có lịch nhắc thanh toán nào.
+                  No payment reminders scheduled yet.
                 </td>
               </tr>
             )}
@@ -341,11 +341,11 @@ export default function PaymentSchedule() {
       {/* Edit/Add Modal */}
       {modalItem && (
         <Modal
-          title={modalItem === 'NEW' ? 'Tạo Nhắc Nhở Mới' : 'Chỉnh Sửa Nhắc Nhở'}
+          title={modalItem === 'NEW' ? 'Create New Reminder' : 'Edit Payment Reminder'}
           onClose={() => setModalItem(null)}
         >
           <div className="form-group">
-            <label>Tên dịch vụ / Tiêu đề:</label>
+            <label>Service Name / Title:</label>
             <input
               type="text"
               className="input-field"
@@ -355,7 +355,7 @@ export default function PaymentSchedule() {
           </div>
 
           <div className="form-group" style={{ marginTop: '1rem' }}>
-            <label>Email tài khoản:</label>
+            <label>Account Email:</label>
             <input
               type="email"
               className="input-field"
@@ -365,7 +365,7 @@ export default function PaymentSchedule() {
           </div>
 
           <div className="form-group" style={{ marginTop: '1rem' }}>
-            <label>Số tiền:</label>
+            <label>Amount:</label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input
                 type="number"
@@ -387,10 +387,10 @@ export default function PaymentSchedule() {
 
           <div className="modal-actions" style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <button className="btn btn-secondary" onClick={() => setModalItem(null)}>
-              Hủy
+              Cancel
             </button>
             <button className="btn btn-primary" onClick={handleSaveModal}>
-              Lưu
+              Save
             </button>
           </div>
         </Modal>
