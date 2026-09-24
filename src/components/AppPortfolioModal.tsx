@@ -5,7 +5,9 @@ import {
   EditIcon,
   TrashIcon,
   PlusIcon,
+  ShareIcon,
 } from './icons';
+import { ShareAppsModal } from './ShareAppsModal';
 import type { AppProject, BacklogItem } from '../data/mappers';
 import { interpretHealth } from '../utils/health';
 import { supabase } from '../utils/supabaseClient';
@@ -259,6 +261,7 @@ export function AppPortfolioModal({
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'backlog' | 'settings'>(initialTab);
   const [specLang, setSpecLang] = useState<'vi' | 'en'>('vi');
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [newBacklogTitle, setNewBacklogTitle] = useState('');
 
   // Edit form state for admin settings tab
@@ -567,6 +570,17 @@ export function AppPortfolioModal({
                 <span>{app.manualChecked ? '✓ Đã Check Tay' : '○ Xác Nhận Check'}</span>
               </button>
             )}
+
+            <button
+              type="button"
+              className="btn btn-secondary portfolio-btn-share"
+              onClick={() => setIsShareModalOpen(true)}
+              title="Chia sẻ ứng dụng này cho bạn bè, đồng nghiệp hoặc thầy cô"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <ShareIcon size={15} />
+              <span>Chia Sẻ</span>
+            </button>
 
             <button className="portfolio-close-btn" onClick={onClose} title="Đóng modal (Esc)">
               ✕
@@ -1155,6 +1169,13 @@ export function AppPortfolioModal({
             </div>
           )}
         </div>
+        {isShareModalOpen && (
+          <ShareAppsModal
+            allApps={[app]}
+            initialSelectedAppIds={[app.id]}
+            onClose={() => setIsShareModalOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

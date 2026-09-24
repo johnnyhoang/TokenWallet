@@ -16,6 +16,7 @@ import {
 import { interpretHealth } from '../utils/health';
 import { AppPortfolioModal } from '../components/AppPortfolioModal';
 import { AddAppModal } from '../components/AddAppModal';
+import { ShareAppsModal } from '../components/ShareAppsModal';
 import { removedIds } from '../data/syncPolicy';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -24,6 +25,8 @@ import {
   PlusIcon,
   ExternalLinkIcon,
   AppStoreIcon,
+  ShareIcon,
+  CheckIcon,
 } from '../components/icons';
 
 export type { AppProject, BacklogItem };
@@ -157,12 +160,49 @@ export default function AppWallet() {
     seed: (loaded) => loaded,
   });
 
+  const sharedAppsParam = searchParams.get('apps');
+  const sharedAppIds = useMemo(() => {
+    if (!sharedAppsParam) return null;
+    return sharedAppsParam
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [sharedAppsParam]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalTargetIds, setShareModalTargetIds] = useState<string[] | undefined>(undefined);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedAppIds, setSelectedAppIds] = useState<Set<string>>(new Set());
 
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [healthMap, setHealthMap] = useState<Record<string, 'healthy' | 'checking' | 'failed'>>({});
+
+  const handleOpenShareModal = (targetAppId?: string) => {
+    if (targetAppId) {
+      setShareModalTargetIds([targetAppId]);
+    } else if (selectedAppIds.size > 0) {
+      setShareModalTargetIds(Array.from(selectedAppIds));
+    } else {
+      setShareModalTargetIds(undefined);
+    }
+    setIsShareModalOpen(true);
+  };
+
+  const handleToggleSelectApp = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedAppIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Combined Apps view
   const apps: AppProject[] = useMemo(() => {
@@ -344,6 +384,13 @@ export default function AppWallet() {
 
   const filteredApps = useMemo(() => {
     let result = apps;
+
+    // Filter by sharedAppIds if query param ?apps=... is present
+    if (sharedAppIds && sharedAppIds.length > 0) {
+      const idSet = new Set(sharedAppIds);
+      result = result.filter((a) => idSet.has(a.id));
+    }
+
     const q = searchQuery.toLowerCase().trim();
 
     if (selectedCategory !== 'all') {
@@ -360,7 +407,7 @@ export default function AppWallet() {
     }
 
     return result;
-  }, [apps, searchQuery, selectedCategory]);
+  }, [apps, sharedAppIds, searchQuery, selectedCategory]);
 
   return (
     <div className="app-wallet-container">
@@ -386,6 +433,35 @@ export default function AppWallet() {
         <CodeExperience />
       ) : (
         <>
+          {/* Shared Apps Banner (if viewing shared link) */}
+          {sharedAppIds && sharedAppIds.length > 0 && (
+            <div className="store-share-banner">
+              <div className="store-share-banner-left">
+                <span className="store-share-banner-icon">🎁</span>
+                <div>
+                  <div className="store-share-banner-title">
+                    Danh Mục Ứng Dụng Được Chia Sẻ
+                  </div>
+                  <div className="store-share-banner-desc">
+                    Đang hiển thị {filteredApps.length} ứng dụng được lựa chọn để chia sẻ với bạn.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('apps');
+                  setSearchParams(newParams);
+                }}
+              >
+                <span>Xem Toàn Bộ Kho ({apps.length} apps)</span>
+              </button>
+            </div>
+          )}
+
           {/* App Store Header & Controls Card */}
           <div className="store-header-card">
             <div className="store-header-top">
@@ -425,12 +501,34 @@ export default function AppWallet() {
 
               <div className="store-actions">
                 <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleOpenShareModal()}
+                  title="Chia sẻ ứng dụng cho bạn bè, đồng nghiệp hoặc thầy cô"
+                >
+                  <ShareIcon size={15} />
+                  <span>Chia Sẻ Apps</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`btn ${isSelectMode ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => {
+                    setIsSelectMode((v) => !v);
+                    if (isSelectMode) setSelectedAppIds(new Set());
+                  }}
+                  title="Bật/tắt chế độ chọn nhiều ứng dụng để chia sẻ"
+                >
+                  <span>{isSelectMode ? '✓ Đang Chọn' : '☑ Chọn Nhiều'}</span>
+                </button>
+
+                <button
                   className="btn btn-secondary"
                   onClick={handleCheckHealthAll}
                   disabled={isCheckingHealth}
                 >
                   <RefreshIcon size={15} className={isCheckingHealth ? 'spin-icon' : ''} />
-                  {isCheckingHealth ? 'Đang check health...' : 'Check Health Tất Cả'}
+                  {isCheckingHealth ? 'Đang check health...' : 'Check Health'}
                 </button>
 
                 {canEdit && (
@@ -472,18 +570,39 @@ export default function AppWallet() {
           <div className="store-grid">
             {filteredApps.map((app, index) => {
               const backlogCount = app.backlog?.length || 0;
+              const isSelected = selectedAppIds.has(app.id);
 
               return (
                 <div
                   key={app.id}
-                  className={`store-card ${app.isDisabled ? 'disabled' : ''}`}
+                  className={`store-card ${app.isDisabled ? 'disabled' : ''} ${
+                    isSelectMode && isSelected ? 'selected-card' : ''
+                  }`}
                   style={{ animationDelay: `${index * 0.04}s`, cursor: 'pointer' }}
-                  onClick={() => navigate(`/app-wallet/${app.id}`)}
-                  title={`Bấm để xem Portfolio chi tiết & đặc tả của ${app.title}`}
+                  onClick={() => {
+                    if (isSelectMode) {
+                      handleToggleSelectApp(app.id);
+                    } else {
+                      navigate(`/app-wallet/${app.id}`);
+                    }
+                  }}
+                  title={
+                    isSelectMode
+                      ? `${isSelected ? 'Bỏ chọn' : 'Chọn'} ${app.title}`
+                      : `Bấm để xem Portfolio chi tiết & đặc tả của ${app.title}`
+                  }
                 >
                   <div>
                     {/* Squircle Icon & Title Block */}
                     <div className="store-card-header">
+                      {isSelectMode && (
+                        <div
+                          className={`store-card-select-check ${isSelected ? 'checked' : ''}`}
+                          onClick={(e) => handleToggleSelectApp(app.id, e)}
+                        >
+                          {isSelected && <CheckIcon size={12} />}
+                        </div>
+                      )}
                       <AppIcon title={app.title} frontendUrl={app.frontendUrl} id={app.id} />
                       <div className="store-app-meta">
                         <div className="store-app-title" title={app.title}>
@@ -616,8 +735,8 @@ export default function AppWallet() {
                     </p>
                   </div>
 
-                  {/* Card Footer: OPEN Button, SPECS Button & Edit controls */}
-                  <div className="store-card-footer" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  {/* Card Footer: OPEN Button, SPECS Button, SHARE Button & Backlog */}
+                  <div className="store-card-footer" style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                     {app.frontendUrl ? (
                       <a
                         href={app.frontendUrl}
@@ -653,20 +772,32 @@ export default function AppWallet() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.3rem',
-                        padding: '0.45rem 0.65rem',
+                        gap: '0.25rem',
+                        padding: '0.45rem 0.55rem',
                         background: 'rgba(59, 130, 246, 0.15)',
                         color: '#60a5fa',
                         border: '1px solid rgba(59, 130, 246, 0.35)',
                         borderRadius: '9999px',
                         fontWeight: 700,
-                        fontSize: '0.78rem',
+                        fontSize: '0.75rem',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                       }}
                     >
                       <span>📋</span>
                       <span>SPECS</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenShareModal(app.id);
+                      }}
+                      title={`Chia sẻ ${app.title} cho bạn bè, đồng nghiệp hoặc thầy cô`}
+                      className="store-card-share-btn"
+                    >
+                      <ShareIcon size={13} />
                     </button>
 
                     {backlogCount > 0 && (
@@ -727,6 +858,68 @@ export default function AppWallet() {
               onClose={() => setIsAddModalOpen(false)}
               onSaveNewApp={handleSaveNewApp}
               onUpdateExistingApp={handleUpdateExistingApp}
+            />
+          )}
+
+          {/* Floating Selection Action Bar */}
+          {isSelectMode && selectedAppIds.size > 0 && (
+            <div className="store-selection-bar">
+              <div className="store-selection-bar-info">
+                <span>
+                  Đã chọn <strong>{selectedAppIds.size}</strong> ứng dụng
+                </span>
+              </div>
+              <div className="store-selection-bar-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    if (selectedAppIds.size === filteredApps.length) {
+                      setSelectedAppIds(new Set());
+                    } else {
+                      setSelectedAppIds(new Set(filteredApps.map((a) => a.id)));
+                    }
+                  }}
+                >
+                  {selectedAppIds.size === filteredApps.length ? 'Bỏ chọn' : 'Chọn tất cả'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleOpenShareModal()}
+                >
+                  <ShareIcon size={14} />
+                  <span>Chia Sẻ ({selectedAppIds.size})</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setIsSelectMode(false);
+                    setSelectedAppIds(new Set());
+                  }}
+                >
+                  Thoát
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Share Apps Modal */}
+          {isShareModalOpen && (
+            <ShareAppsModal
+              allApps={apps}
+              initialSelectedAppIds={
+                shareModalTargetIds && shareModalTargetIds.length > 0
+                  ? shareModalTargetIds
+                  : selectedAppIds.size > 0
+                  ? Array.from(selectedAppIds)
+                  : undefined
+              }
+              onClose={() => {
+                setIsShareModalOpen(false);
+                setShareModalTargetIds(undefined);
+              }}
             />
           )}
         </>
