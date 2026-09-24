@@ -272,6 +272,24 @@ cleanDatabase().catch(console.error);
 
 ---
 
+## 👥 8. User Profile, Admin RBAC & Multi-Tenant Group/Family Model
+
+### 1. Profile Tracking & Edit Profile
+- **Auto-Track Profile:** Trigger PostgreSQL `on_auth_user_created` creates a mirror row in `public.profiles` upon Google Login (storing ID, email, `full_name`, `avatar_url`, `last_sign_in_at`).
+- **Editable Profile:** Users can update their display name, avatar, contact info, and app-specific attributes.
+
+### 2. Admin Permission Management (RBAC)
+- **Role & Permission Table:** Dedicated table (e.g. `<prefix>_user_permissions`) storing role (`admin` | `user`) and modular access flags (`can_read_*`, `can_edit_*`).
+- **Admin UI:** Only users with `role = 'admin'` or designated owner email can access the permission control view.
+
+### 3. Multi-Tenant Group / Family Model (Family & Mikawaii Pattern)
+- **Open Group Creation:** Any authenticated user can create their own Group/Family and automatically become the Group `owner`.
+- **Member Invites:** Group owners/admins can invite other users via email or unique 8-character `invite_code`.
+- **Sub-Admin Delegation:** Owners can promote members to group `admin` to co-manage the group.
+- **Data Isolation:** All group domain records (e.g., `<prefix>_transactions`, `<prefix>_tasks`) link to `group_id` / `family_id` with RLS policies restricting access exclusively to verified members of that group.
+
+---
+
 ## 🎨 9. Frontend UI Refactor & Design Standards (`frontend-design`)
 
 When refactoring UI for production applications using the `frontend-design` skill:
@@ -302,6 +320,7 @@ When auditing or reviewing code for any project in `D:\Hoa Hoang\Apps`, verify c
 - [ ] **Local Dev:** `.env.local` configured for remote Supabase DB, Express/NestJS CORS allows local frontend origins.
 - [ ] **Mock Data Generator:** `scripts/seed-mock-data.ts` present, seeds realistic domain records, runnable via `npm run db:seed`.
 - [ ] **Clean & Reset Scripts:** `scripts/clean-db.ts` present, deletes data in correct foreign-key reverse order, runnable via `npm run db:clean` / `npm run db:reset`.
+- [ ] **Profile, Admin RBAC & Group/Family Model:** Track profile on login (`public.profiles`), User profile edit screen, Admin permission panel (`<prefix>_user_permissions`), and Group/Family multi-tenant support (creator creates group, invites members, promotes sub-admins - Family & Mikawaii pattern).
 - [ ] **Code Quality:** TypeScript strict mode enabled, `type-only imports` used for types under `verbatimModuleSyntax`.
 - [ ] **Logo & Favicon:** Every Web/App MUST have a unique, custom-designed Logo and Favicon (default framework favicons forbidden).
 - [ ] **Frontend Design (Skill frontend-design):** Business logic & API contract preserved 100%, AI-generated UI tropes eliminated, strong typography & visual hierarchy established, responsive & accessible states verified.

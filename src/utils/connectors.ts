@@ -23,6 +23,21 @@ export interface GitHubRepoPayload {
   starsCount: number;
 }
 
+export interface GitHubUserRepoItem {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  description: string | null;
+  html_url: string;
+  updated_at: string;
+  language: string | null;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+}
+
 export interface VercelProjectPayload {
   name: string;
   projectName: string;
@@ -63,6 +78,38 @@ export function parseGitHubUrl(input: string): { owner: string; repo: string } |
 }
 
 /**
+ * Fetches user's accessible GitHub repositories (including private ones) when authenticated
+ */
+export async function fetchUserGitHubRepos(customToken?: string): Promise<GitHubUserRepoItem[]> {
+  const token =
+    customToken?.trim() ||
+    localStorage.getItem('github_token') ||
+    import.meta.env.VITE_GITHUB_TOKEN ||
+    '';
+
+  if (!token) {
+    throw new Error('Chưa có token xác thực GitHub.');
+  }
+
+  const res = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member', {
+    headers: {
+      Accept: 'application/vnd.github.v3+json',
+      Authorization: `token ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('GitHub Token đã hết hạn hoặc không hợp lệ. Vui lòng kết nối lại tài khoản.');
+    }
+    throw new Error(`Lỗi tải danh sách GitHub Repos (${res.status}): ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/**
  * Fetches repository metadata, README, package.json, and languages from GitHub API
  */
 export async function fetchGitHubRepoData(
@@ -71,7 +118,7 @@ export async function fetchGitHubRepoData(
 ): Promise<GitHubRepoPayload> {
   const parsed = parseGitHubUrl(input);
   if (!parsed) {
-    throw new Error('Invalid GitHub URL. Please provide format: https://github.com/owner/repo or owner/repo');
+    throw new Error('Đường dẫn GitHub không hợp lệ. Vui lòng nhập định dạng: https://github.com/owner/repo hoặc owner/repo');
   }
 
   const { owner, repo } = parsed;
@@ -92,12 +139,12 @@ export async function fetchGitHubRepoData(
   const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
   if (!repoRes.ok) {
     if (repoRes.status === 404) {
-      throw new Error(`Repository '${owner}/${repo}' not found. If it is private, please provide a GitHub Personal Access Token.`);
+      throw new Error(`Không tìm thấy repository '${owner}/${repo}'. Nếu là repo riêng tư (private), vui lòng kết nối tài khoản GitHub OAuth hoặc cung cấp Token.`);
     }
     if (repoRes.status === 403) {
-      throw new Error('GitHub API rate limit exceeded. Please configure a GitHub Personal Access Token in Settings.');
+      throw new Error('GitHub API bị giới hạn lượt gọi (Rate Limited). Vui lòng kết nối tài khoản GitHub OAuth hoặc cấu hình Token.');
     }
-    throw new Error(`GitHub API error (${repoRes.status}): ${repoRes.statusText}`);
+    throw new Error(`Lỗi kết nối GitHub API (${repoRes.status}): ${repoRes.statusText}`);
   }
   const repoData = await repoRes.json();
 
@@ -195,7 +242,7 @@ export async function fetchVercelProjectData(
 ): Promise<VercelProjectPayload> {
   const { projectName, liveUrl } = parseVercelUrl(input);
   if (!projectName) {
-    throw new Error('Please enter a valid Vercel Project name or deployment URL.');
+    throw new Error('Vui lòng nhập tên Vercel Project hoặc đường dẫn URL hợp lệ.');
   }
 
   const token =

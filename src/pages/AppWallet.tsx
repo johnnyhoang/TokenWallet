@@ -14,7 +14,6 @@ import {
   type BacklogItemRow,
 } from '../data/mappers';
 import { interpretHealth } from '../utils/health';
-import { Modal } from '../components/Modal';
 import { AppPortfolioModal } from '../components/AppPortfolioModal';
 import { AddAppModal } from '../components/AddAppModal';
 import { removedIds } from '../data/syncPolicy';
@@ -23,7 +22,6 @@ import {
   SearchIcon,
   RefreshIcon,
   PlusIcon,
-  EditIcon,
   ExternalLinkIcon,
   AppStoreIcon,
 } from '../components/icons';
@@ -162,9 +160,7 @@ export default function AppWallet() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [activeEditModal, setActiveEditModal] = useState<AppProject | null>(null);
 
-  const [editFormData, setEditFormData] = useState<Partial<AppProject>>({});
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const [healthMap, setHealthMap] = useState<Record<string, 'healthy' | 'checking' | 'failed'>>({});
 
@@ -182,6 +178,15 @@ export default function AppWallet() {
     if (!appId) return null;
     return apps.find((a) => a.id === appId) || null;
   }, [apps, appId]);
+
+  // Initial tab for AppPortfolioModal if specified in search params
+  const portfolioInitialTab = useMemo(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'settings') return 'settings';
+    if (tabParam === 'specs') return 'specs';
+    if (tabParam === 'backlog') return 'backlog';
+    return 'overview';
+  }, [searchParams]);
 
   // Dynamic Categories list extracted from projects
   const categories = useMemo(() => {
@@ -309,7 +314,7 @@ export default function AppWallet() {
     }
   };
 
-  // Update existing app (from AddAppModal or Quick Edit)
+  // Update existing app (from AddAppModal or Portfolio Settings Tab)
   const handleUpdateExistingApp = async (updated: AppProject, backlog: BacklogItem[]) => {
     const row = appProjectToRow(updated);
     const { error: saveErr } = await supabase.from('tkw_app_projects').upsert(row);
@@ -335,28 +340,6 @@ export default function AppWallet() {
       ...prev.filter((b) => b.projectId !== updated.id),
       ...backlog.map((b) => ({ ...b, projectId: updated.id })),
     ]);
-  };
-
-  const handleOpenEditModal = (project: AppProject) => {
-    setActiveEditModal(project);
-    setEditFormData({ ...project });
-  };
-
-  const handleSaveQuickEdit = async () => {
-    if (!activeEditModal || !editFormData.title?.trim()) return;
-    const updated: AppProject = {
-      ...activeEditModal,
-      title: editFormData.title.trim(),
-      frontendUrl: editFormData.frontendUrl?.trim() || '',
-      category: editFormData.category || 'Web App',
-      database: editFormData.database !== undefined ? editFormData.database : activeEditModal.database,
-      status: editFormData.status || 'Development',
-      priority: editFormData.priority || 'Medium',
-      description: editFormData.description || '',
-    };
-
-    await handleUpdateExistingApp(updated, activeEditModal.backlog || []);
-    setActiveEditModal(null);
   };
 
   const filteredApps = useMemo(() => {
@@ -411,12 +394,12 @@ export default function AppWallet() {
                   <AppStoreIcon size={26} />
                   App Store Workspace
                 </h2>
-                <p>Ecosystem Applications & Software Portfolio</p>
+                <p>Bộ sưu tập các ứng dụng & sản phẩm hệ thống</p>
               </div>
 
               <div className="store-stats-pills">
                 <div className="store-stat-pill">
-                  Total Apps: <strong>{apps.length}</strong>
+                  Tổng số app: <strong>{apps.length}</strong>
                 </div>
                 {healthyCount > 0 && (
                   <div className="store-stat-pill active-healthy">
@@ -434,7 +417,7 @@ export default function AppWallet() {
                 <input
                   type="text"
                   className="store-search-input"
-                  placeholder="Search applications, categories, tags..."
+                  placeholder="Tìm kiếm ứng dụng, danh mục..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -447,13 +430,13 @@ export default function AppWallet() {
                   disabled={isCheckingHealth}
                 >
                   <RefreshIcon size={15} className={isCheckingHealth ? 'spin-icon' : ''} />
-                  {isCheckingHealth ? 'Checking health...' : 'Check All Health'}
+                  {isCheckingHealth ? 'Đang check health...' : 'Check Health Tất Cả'}
                 </button>
 
                 {canEdit && (
                   <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
                     <PlusIcon size={16} />
-                    Add Project
+                    Thêm Dự Án
                   </button>
                 )}
               </div>
@@ -465,7 +448,7 @@ export default function AppWallet() {
                 className={`store-cat-tab ${selectedCategory === 'all' ? 'active' : ''}`}
                 onClick={() => setSelectedCategory('all')}
               >
-                All
+                Tất cả
                 <span className="store-cat-count">{apps.length}</span>
               </button>
 
@@ -496,7 +479,7 @@ export default function AppWallet() {
                   className={`store-card ${app.isDisabled ? 'disabled' : ''}`}
                   style={{ animationDelay: `${index * 0.04}s`, cursor: 'pointer' }}
                   onClick={() => navigate(`/app-wallet/${app.id}`)}
-                  title={`Click to view detailed portfolio & specs for ${app.title}`}
+                  title={`Bấm để xem Portfolio chi tiết & đặc tả của ${app.title}`}
                 >
                   <div>
                     {/* Squircle Icon & Title Block */}
@@ -507,38 +490,6 @@ export default function AppWallet() {
                           {app.title}
                         </div>
                         <div className="store-app-category">{app.category || 'Web App'}</div>
-
-                        {/* Author & Hosting Info Row */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '4px',
-                            fontSize: '0.72rem',
-                            color: '#94a3b8',
-                            marginTop: '2px',
-                          }}
-                        >
-                          <span style={{ color: '#cbd5e1', fontWeight: 600 }}>👤 {app.author || 'johnnyhoang'}</span>
-                          {app.hosting && (
-                            <>
-                              <span style={{ opacity: 0.35 }}>•</span>
-                              <span
-                                style={{
-                                  color: '#38bdf8',
-                                  maxWidth: '120px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                                title={`Hosting: ${app.hosting}`}
-                              >
-                                ☁️ {app.hosting}
-                              </span>
-                            </>
-                          )}
-                        </div>
                       </div>
                     </div>
 
@@ -546,7 +497,7 @@ export default function AppWallet() {
                     <div className="store-card-status-bar">
                       <div
                         className="store-health-tag"
-                        title={app.healthCheckedAt ? `Auto-checked at: ${app.healthCheckedAt}` : 'Not checked'}
+                        title={app.healthCheckedAt ? `Kiểm tra tự động lúc: ${app.healthCheckedAt}` : 'Chưa kiểm tra tự động'}
                       >
                         <span
                           className={`store-health-dot ${app.healthStatus || 'unknown'}`}
@@ -558,7 +509,7 @@ export default function AppWallet() {
                             ? 'Down'
                             : app.healthStatus === 'checking'
                             ? 'Checking...'
-                            : 'Unchecked'}
+                            : 'Chưa check'}
                         </span>
                       </div>
 
@@ -567,9 +518,9 @@ export default function AppWallet() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/app-wallet/${app.id}`);
+                            navigate(`/app-wallet/${app.id}?tab=specs`);
                           }}
-                          title="View Technical Specification (SRS)"
+                          title="Xem Đặc Tả Kỹ Thuật (Specification)"
                           style={{
                             fontSize: '0.7rem',
                             fontWeight: 600,
@@ -639,21 +590,21 @@ export default function AppWallet() {
                         disabled={!canEdit}
                         title={
                           canEdit
-                            ? (app.manualChecked ? 'Click to toggle or update verification date' : 'Click to confirm you verified this application')
-                            : 'Verification status'
+                            ? (app.manualChecked ? 'Bấm để hủy hoặc cập nhật ngày xác nhận' : 'Bấm để xác nhận bạn đã kiểm tra ứng dụng')
+                            : 'Trạng thái xác nhận kiểm tra'
                         }
                       >
                         <span className="check-indicator">{app.manualChecked ? '✓' : '○'}</span>
                         <span className="check-text">
                           {app.manualChecked ? (
                             <>
-                              <span className="check-label">Verified</span>
+                              <span className="check-label">Đã check</span>
                               {app.manualCheckedAt && (
                                 <span className="check-date">• {app.manualCheckedAt}</span>
                               )}
                             </>
                           ) : (
-                            <span className="check-prompt">Verify check</span>
+                            <span className="check-prompt">Xác nhận đã check</span>
                           )}
                         </span>
                       </button>
@@ -661,7 +612,7 @@ export default function AppWallet() {
 
                     {/* Description */}
                     <p className="store-app-desc" title={app.description}>
-                      {app.description || 'No description available for this application.'}
+                      {app.description || 'Không có mô tả cho ứng dụng này.'}
                     </p>
                   </div>
 
@@ -673,10 +624,10 @@ export default function AppWallet() {
                         target="_blank"
                         rel="noreferrer"
                         className="store-btn-open"
-                        title={`Open ${app.title}`}
+                        title={`Mở ${app.title}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        OPEN
+                        MỞ
                         <ExternalLinkIcon size={12} />
                       </a>
                     ) : (
@@ -684,10 +635,10 @@ export default function AppWallet() {
                         className="store-btn-open disabled"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (canEdit) handleOpenEditModal(app);
+                          navigate(`/app-wallet/${app.id}?tab=settings`);
                         }}
                       >
-                        No URL
+                        Chưa có URL
                       </button>
                     )}
 
@@ -695,9 +646,9 @@ export default function AppWallet() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/app-wallet/${app.id}`);
+                        navigate(`/app-wallet/${app.id}?tab=specs`);
                       }}
-                      title="View Portfolio & Technical Specification"
+                      title="Xem Portfolio & Đặc Tả Kỹ Thuật"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -719,22 +670,9 @@ export default function AppWallet() {
                     </button>
 
                     {backlogCount > 0 && (
-                      <span className="store-backlog-chip" title={`${backlogCount} backlog tasks`}>
-                        {backlogCount} tasks
+                      <span className="store-backlog-chip" title={`${backlogCount} công việc backlog`}>
+                        {backlogCount} task
                       </span>
-                    )}
-
-                    {canEdit && (
-                      <button
-                        className="store-icon-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditModal(app);
-                        }}
-                        title="Quick Edit / Manage details"
-                      >
-                        <EditIcon size={14} />
-                      </button>
                     )}
                   </div>
                 </div>
@@ -747,16 +685,17 @@ export default function AppWallet() {
                 <div className="store-card-add-icon">
                   <PlusIcon size={20} />
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Add New Application</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Thêm Ứng Dụng Mới</span>
               </div>
             )}
           </div>
 
-          {/* Fullscreen App Portfolio Modal (Dedicated Route & Complete App Details) */}
+          {/* Unified Fullscreen App Portfolio Modal (Overview, Specs, Backlog, and Settings/Admin Edit) */}
           {selectedApp && (
             <AppPortfolioModal
               app={selectedApp}
               canEdit={canEdit}
+              initialTab={portfolioInitialTab}
               onClose={() => navigate('/app-wallet')}
               onUpdateApp={(updated) => {
                 setProjectItems((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
@@ -769,7 +708,7 @@ export default function AppWallet() {
                   setBacklogItems((prev) => prev.filter((b) => b.projectId !== deleteId));
                   navigate('/app-wallet');
                 } catch (err: any) {
-                  alert('Error deleting project: ' + (err?.message || ''));
+                  alert('Lỗi xóa dự án: ' + (err?.message || ''));
                 }
               }}
               onBacklogChange={(nextBacklog) => {
@@ -789,84 +728,6 @@ export default function AppWallet() {
               onSaveNewApp={handleSaveNewApp}
               onUpdateExistingApp={handleUpdateExistingApp}
             />
-          )}
-
-          {/* Quick Edit App Modal (For Admin) */}
-          {activeEditModal && (
-            <Modal
-              title="Edit Application"
-              onClose={() => setActiveEditModal(null)}
-              maxWidth="540px"
-            >
-              <div className="form-group">
-                <label>Application Title:</label>
-                <input
-                  type="text"
-                  className="input-text"
-                  value={editFormData.title || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                  placeholder="e.g.: Token Wallet, Payment App..."
-                />
-              </div>
-
-              <div className="form-row" style={{ marginTop: '1rem' }}>
-                <div className="form-group">
-                  <label>Category:</label>
-                  <input
-                    type="text"
-                    className="input-text"
-                    value={editFormData.category || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Database Supabase:</label>
-                  <select
-                    className="input-select"
-                    value={editFormData.database || 'JH Supabase NoData'}
-                    onChange={(e) => setEditFormData({ ...editFormData, database: e.target.value })}
-                  >
-                    <option value="JH Supabase Data 1">JH Supabase Data 1</option>
-                    <option value="JH Supabase Data 2">JH Supabase Data 2</option>
-                    <option value="JH Supabase NoData">JH Supabase NoData</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginTop: '1rem' }}>
-                <label>Frontend URL:</label>
-                <input
-                  type="url"
-                  className="input-text"
-                  value={editFormData.frontendUrl || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, frontendUrl: e.target.value })}
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginTop: '1rem' }}>
-                <label>Description:</label>
-                <textarea
-                  className="input-text"
-                  rows={3}
-                  value={editFormData.description || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                />
-              </div>
-
-              <div
-                className="modal-actions"
-                style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}
-              >
-                <button className="btn btn-secondary" onClick={() => setActiveEditModal(null)}>
-                  Cancel
-                </button>
-                <button className="btn btn-primary" onClick={handleSaveQuickEdit}>
-                  Save Changes
-                </button>
-              </div>
-            </Modal>
           )}
         </>
       )}

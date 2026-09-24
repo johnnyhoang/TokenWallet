@@ -29,7 +29,10 @@ interface AuthContextValue {
   permissions: UserPermissions | null;
   isAdmin: boolean;
   isAuthLoading: boolean;
+  githubToken: string | null;
   signInWithGoogle: () => Promise<void>;
+  signInWithGitHub: () => Promise<void>;
+  disconnectGitHub: () => void;
   signOut: () => Promise<void>;
   refreshPermissions: () => Promise<void>;
 }
@@ -40,26 +43,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [githubToken, setGithubToken] = useState<string | null>(
+    localStorage.getItem('github_token')
+  );
 
   async function loadPermissions(userId: string, email: string) {
     const isOwnerAdmin = email.toLowerCase() === 'hoang.hoa@gmail.com';
-    const defaultRow = {
+
+    // Always upsert with unprivileged defaults so RLS "self register unprivileged" policy passes.
+    // Owner admin privilege is enforced client-side after reading the DB row.
+    const registerRow = {
       user_id: userId,
       email,
-      role: isOwnerAdmin ? 'admin' : 'user',
-      can_read_token_wallet: isOwnerAdmin,
-      can_edit_token_wallet: isOwnerAdmin,
-      can_read_payments: isOwnerAdmin,
-      can_edit_payments: isOwnerAdmin,
+      role: 'user',
+      can_read_token_wallet: false,
+      can_edit_token_wallet: false,
+      can_read_payments: false,
+      can_edit_payments: false,
       can_read_app_wallet: true,
-      can_edit_app_wallet: isOwnerAdmin,
+      can_edit_app_wallet: false,
     };
 
-    // Try to register user identity safely
+    // Try to register user identity safely (INSERT only if not exists)
     try {
       await supabase
         .from('tkw_user_permissions')
-        .upsert(defaultRow, { onConflict: 'user_id' });
+        .upsert(registerRow, { onConflict: 'user_id', ignoreDuplicates: true });
     } catch (err) {
       console.warn('permission row upsert failed', err);
     }
@@ -105,6 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
+      if (s?.provider_token) {
+        localStorage.setItem('github_token', s.provider_token);
+        setGithubToken(s.provider_token);
+      }
       if (s?.user) {
         loadPermissions(s.user.id, s.user.email ?? '').finally(() =>
           setIsAuthLoading(false)
@@ -116,6 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
+      if (s?.provider_token) {
+        localStorage.setItem('github_token', s.provider_token);
+        setGithubToken(s.provider_token);
+      }
       if (s?.user) {
         loadPermissions(s.user.id, s.user.email ?? '');
       } else {
@@ -133,6 +150,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  async function signInWithGitHub() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        scopes: 'repo read:user',
+        redirectTo: window.location.origin,
+      },
+    });
+  }
+
+  function disconnectGitHub() {
+    localStorage.removeItem('github_token');
+    setGithubToken(null);
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setPermissions(null);
@@ -143,8 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      session, user, permissions, isAdmin, isAuthLoading,
-      signInWithGoogle, signOut, refreshPermissions,
+      session, user, permissions, isAdmin, isAuthLoading, githubToken,
+      signInWithGoogle, signInWithGitHub, disconnectGitHub, signOut, refreshPermissions,
     }}>
       {children}
     </AuthContext.Provider>

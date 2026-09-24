@@ -42,21 +42,21 @@ export interface AITool {
 
 export interface AppProjectRow {
   id: string;
-  name?: string;
-  title?: string;
+  title: string;
   url?: string;
-  type?: string;
   category?: string;
-  database?: string;
   status?: string;
   priority?: string;
   description?: string;
+  is_disabled?: boolean;
+  tech_notes?: string;
+  name?: string;
+  type?: string;
   developer?: string;
   github?: string;
   hosting?: string;
   tech_stack?: string;
-  tech_notes?: string;
-  is_disabled?: boolean;
+  database?: string;
   manual_checked?: boolean;
   manual_checked_at?: string;
   health_status?: string;
@@ -69,6 +69,7 @@ export interface AppProjectMeta {
   github?: string;
   hosting?: string;
   techStack?: string;
+  database?: string;
   isDisabled?: boolean;
   manualChecked?: boolean;
   manualCheckedAt?: string;
@@ -233,6 +234,7 @@ export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): 
   if (meta.github) metaPayload.github = meta.github;
   if (meta.hosting) metaPayload.hosting = meta.hosting;
   if (meta.techStack) metaPayload.techStack = meta.techStack;
+  if (meta.database) metaPayload.database = meta.database;
   if (meta.isDisabled !== undefined) metaPayload.isDisabled = meta.isDisabled;
   if (meta.manualChecked !== undefined) metaPayload.manualChecked = meta.manualChecked;
   if (meta.manualCheckedAt) metaPayload.manualCheckedAt = meta.manualCheckedAt;
@@ -248,29 +250,32 @@ export function serializeTechNotes(cleanNotes?: string, meta?: AppProjectMeta): 
 
 export function rowToAppProject(row: AppProjectRow): AppProject {
   const { cleanNotes, meta } = parseTechNotesMeta(row.tech_notes);
-  return {
+  const result: AppProject = {
     id: row.id,
-    title: row.name || row.title || 'Untitled App',
-    frontendUrl: row.url || undefined,
-    category: row.type || row.category || 'Web App',
-    database: row.database || undefined,
+    title: row.title || row.name || 'Untitled App',
+    category: row.category || row.type || 'Web App',
     status: row.status || 'Development',
     priority: row.priority || 'Medium',
-    description: row.description || undefined,
-    author: row.developer || meta.author || 'johnnyhoang',
-    github: row.github || meta.github || undefined,
-    hosting: row.hosting || meta.hosting || 'Vercel',
-    techStack: row.tech_stack || meta.techStack || undefined,
     isDisabled: row.is_disabled !== undefined ? Boolean(row.is_disabled) : Boolean(meta.isDisabled),
-    techNotes: cleanNotes,
     manualChecked: row.manual_checked !== undefined ? Boolean(row.manual_checked) : Boolean(meta.manualChecked),
-    manualCheckedAt: row.manual_checked_at || meta.manualCheckedAt,
     healthStatus: (row.health_status || meta.healthStatus || 'unknown') as any,
-    healthCheckedAt: row.health_checked_at || meta.healthCheckedAt,
-    specVi: meta.specVi || undefined,
-    specEn: meta.specEn || undefined,
-    specUpdatedAt: meta.specUpdatedAt || undefined,
   };
+
+  if (row.url) result.frontendUrl = row.url;
+  if (row.database || meta.database) result.database = row.database || meta.database;
+  if (row.description) result.description = row.description;
+  if (row.developer || meta.author) result.author = row.developer || meta.author;
+  if (row.github || meta.github) result.github = row.github || meta.github;
+  if (row.hosting || meta.hosting) result.hosting = row.hosting || meta.hosting;
+  if (row.tech_stack || meta.techStack) result.techStack = row.tech_stack || meta.techStack;
+  if (cleanNotes) result.techNotes = cleanNotes;
+  if (row.manual_checked_at || meta.manualCheckedAt) result.manualCheckedAt = row.manual_checked_at || meta.manualCheckedAt;
+  if (row.health_checked_at || meta.healthCheckedAt) result.healthCheckedAt = row.health_checked_at || meta.healthCheckedAt;
+  if (meta.specVi) result.specVi = meta.specVi;
+  if (meta.specEn) result.specEn = meta.specEn;
+  if (meta.specUpdatedAt) result.specUpdatedAt = meta.specUpdatedAt;
+
+  return result;
 }
 
 export function appProjectToRow(project: AppProject): AppProjectRow {
@@ -279,6 +284,7 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
     github: project.github,
     hosting: project.hosting,
     techStack: project.techStack,
+    database: project.database,
     isDisabled: project.isDisabled,
     manualChecked: project.manualChecked,
     manualCheckedAt: project.manualCheckedAt,
@@ -291,19 +297,14 @@ export function appProjectToRow(project: AppProject): AppProjectRow {
 
   return {
     id: project.id,
-    name: project.title,
+    title: project.title,
     url: project.frontendUrl || '',
-    type: project.category,
-    database: project.database || undefined,
-    status: project.status,
-    priority: project.priority,
+    category: project.category || 'Web App',
+    status: project.status || 'Development',
+    priority: project.priority || 'Medium',
     description: project.description || '',
-    developer: project.author || undefined,
-    github: project.github || undefined,
-    hosting: project.hosting || undefined,
-    tech_stack: project.techStack || undefined,
+    is_disabled: Boolean(project.isDisabled),
     tech_notes: serializedNotes,
-    last_updated: Date.now(),
   };
 }
 

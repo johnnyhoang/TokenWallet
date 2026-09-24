@@ -129,6 +129,17 @@ Hãy kiểm tra toàn bộ mã nguồn và cấu hình của dự án hiện t�
 - [ ] Đọc & phân tích cấu trúc frontend, typography, design tokens trước khi sửa code
 - [ ] Đề xuất 2 phương án visual direction phù hợp và chốt 1 phương án có Visual Hierarchy mạnh mẽ
 - [ ] Kiểm tra responsive trên các breakpoint chính (Mobile, Tablet, Desktop) và các trạng thái Rỗng/Loading/Error, contrast & accessibility
+
+## 11. 👤 Profile, Phân Quyền (RBAC) & Mô Hình Group/Family (User Groups)
+- [ ] **Track Profile Login:** Tự động đồng bộ và lưu thông tin profile user khi đăng nhập qua Trigger PostgreSQL \`on_auth_user_created\` vào \`public.profiles\` (lưu ID, email, avatar_url, full_name, last_sign_in_at).
+- [ ] **User Edit Profile:** Cung cấp modal/trang cho phép User tự chỉnh sửa thông tin cá nhân (Tên hiển thị, Avatar URL/Upload, Email liên hệ, Thông tin nghiệp vụ đặc thù của app).
+- [ ] **Admin Permission Management:** Có trang hoặc khu vực dành riêng cho Admin để xem danh sách Users và phân quyền/cấp permission truy cập (ví dụ: \`role: 'admin' | 'user'\`, bật/tắt module truy cập \`can_read_*\`, \`can_edit_*\`).
+- [ ] **Khảo sát Nhu cầu Group User / Gia đình:** Đánh giá app có yêu cầu dữ liệu theo nhóm/tổ chức/gia đình không.
+- [ ] **Mô hình Group User / Gia đình (Multi-Tenant Family/Group Model):**
+  - Bất kỳ User nào cũng có quyền tự tạo Group/Gia đình riêng cho mình (trở thành Group Owner/Creator).
+  - Chủ Group có quyền mời (Invite) thành viên khác tham gia làm Member (qua email hoặc invite code).
+  - Chủ Group có quyền bổ nhiệm/tạo thêm Admin cho Group/Gia đình của mình để cùng quản lý.
+  - *Tham khảo kiến trúc chuẩn:* Đã áp dụng thành công trong dự án **Family Management** và **Mikawaii**.
 `;
     navigator.clipboard.writeText(markdown);
     setCopiedAll(true);
@@ -570,18 +581,18 @@ const { data: { publicUrl } } = supabase.storage
           <p className="note-desc">Khi nhiều Web App (JohnnyHoang's Wallet, Family, BETH...) dùng chung 1 Supabase Project, người dùng đăng nhập tại App A có thể bị nhảy nhầm về Site URL mặc định nếu không cấu hình <code>redirectTo</code> và Whitelist chính xác.</p>
 
           <h3>Nguyên Nhân Bị Fallback Nhầm App</h3>
-          <p>Mặc định trong Supabase Dashboard có một trường <strong>Site URL</strong> (ví dụ: <code>https://wallet.minkoi.org</code>). Nếu App B (<code>https://family.minkoi.org</code>) gọi <code>signInWithOAuth()</code> mà không khai báo <code>redirectTo</code> hoặc URL của App B chưa nằm trong Whitelist, Supabase sẽ <strong>tự động fallback quay về Site URL mặc định</strong> (App A).</p>
+          <p>Mặc định trong Supabase Dashboard có một trường <strong>Site URL</strong> (ví dụ: <code>https://jwallet.minkoi.org</code>). Nếu App B (<code>https://family.minkoi.org</code>) gọi <code>signInWithOAuth()</code> mà không khai báo <code>redirectTo</code> hoặc URL của App B chưa nằm trong Whitelist, Supabase sẽ <strong>tự động fallback quay về Site URL mặc định</strong> (App A).</p>
 
           <h3>Giải Pháp 1 — Whitelist Đủ Redirect URLs trong Supabase</h3>
           <Step n={1}>
             <p>Vào <strong>Supabase Dashboard</strong> → Authentication → URL Configuration</p>
           </Step>
           <Step n={2}>
-            <p><strong>Site URL:</strong> Đặt domain chính hoặc app trung tâm (ví dụ: <code>https://wallet.minkoi.org</code>)</p>
+            <p><strong>Site URL:</strong> Đặt domain chính hoặc app trung tâm (ví dụ: <code>https://jwallet.minkoi.org</code>)</p>
           </Step>
           <Step n={3}>
             <p><strong>Redirect URLs (Whitelist):</strong> Thêm <em>TẤT CẢ</em> domain production + localhost của các sub-app. Dùng wildcard <code>**</code> để hỗ trợ mọi sub-route:</p>
-            <CodeBlock lang="text" code={`https://wallet.minkoi.org/**
+            <CodeBlock lang="text" code={`https://jwallet.minkoi.org/**
 https://family.minkoi.org/**
 https://beth.minkoi.org/**
 https://ade.minkoi.org/**
@@ -684,7 +695,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://family.minkoi.org',
-  'https://wallet.minkoi.org'
+  'https://jwallet.minkoi.org'
 ];
 
 app.use(cors({
@@ -1113,6 +1124,214 @@ Khi triển khai:
 - Sau khi hoàn tất, kiểm tra các breakpoint chính và sửa các lỗi visual như alignment, overflow, contrast, hover/focus state.
 
 Cuối cùng, báo cáo ngắn: những gì đã thay đổi, các file đã sửa, và các quyết định thiết kế quan trọng.`} />
+        </div>
+      )
+    },
+    {
+      id: 'user-profile-groups-rbac',
+      icon: '👥',
+      title: 'Profile, Phân Quyền & Group/Gia Đình',
+      auditPrompt: `Dùng skill \`web-app-standards\` và \`security-and-hardening\` để audit và xây dựng phân hệ Profile, Phân Quyền Admin và Mô hình Group User / Gia Đình:
+
+1. Profile Tracking & Editing:
+   - Kiểm tra xem app đã tự động track profile khi user login chưa (bảng \`public.profiles\` link \`auth.users\` qua trigger \`on_auth_user_created\`).
+   - Kiểm tra UI cho phép User tự chỉnh sửa profile cá nhân (tên hiển thị, avatar, thông tin nghiệp vụ cần thiết).
+
+2. Khu Vực Admin Cấp Quyền (Permission Management):
+   - Kiểm tra xem app đã có khu vực / trang dành cho Admin quản lý danh sách user và cấp quyền (RBAC / permission flags: can_read_*, can_edit_*) chưa.
+
+3. Mô Hình Group User / Gia Đình (Family & Mikawaii Pattern):
+   - Đánh giá nghiệp vụ của app xem có cần phân nhóm / gia đình không.
+   - Nếu có, triển khai mô hình: Mọi user đều có quyền tự tạo Group/Gia đình riêng cho mình, mời thành viên khác làm Member, và bổ nhiệm thêm Admin cho Group của mình.
+   - Cung cấp bảng DB (\`groups\`, \`group_members\`), RLS policy cách ly dữ liệu giữa các group và UI quản lý thành viên.
+
+Tiến hành kiểm tra, báo cáo kết quả và tự động hoàn thiện mã nguồn nếu còn thiếu sót.`,
+      content: (
+        <div className="note-content">
+          <h2>Profile User, Phân Quyền Admin &amp; Mô Hình Group / Gia Đình</h2>
+          <p className="note-desc">
+            Quy chuẩn thiết kế quản lý danh tính người dùng, cơ chế phân quyền (RBAC) và kiến trúc đa nhóm/gia đình (Multi-Tenant Group Model) tham khảo từ dự án <strong>Family Management</strong> và <strong>Mikawaii</strong>.
+          </p>
+
+          <h3>1. Track Profile Login &amp; Cho Phép User Sửa Profile</h3>
+          <p>Mỗi khi User đăng nhập qua Google OAuth, hệ thống cần tự động đồng bộ profile và cung cấp giao diện cập nhật thông tin:</p>
+          <div className="note-checklist">
+            <label className="checklist-item"><span>✅ <strong>Tự động Track Profile:</strong> Dùng trigger PostgreSQL <code>on_auth_user_created</code> để ghi nhận User vào <code>public.profiles</code> ngay khi login lần đầu.</span></label>
+            <label className="checklist-item"><span>✅ <strong>Ghi nhận thông tin cần thiết:</strong> Email, Tên hiển thị (<code>full_name</code>), Ảnh đại diện (<code>avatar_url</code>), Ngày tạo và Lần đăng nhập cuối.</span></label>
+            <label className="checklist-item"><span>✅ <strong>User Profile Edit Modal / Page:</strong> Cung cấp form để người dùng tự cập nhật thông tin cá nhân và lưu trực tiếp về Supabase.</span></label>
+          </div>
+
+          <CodeBlock lang="sql" code={`-- 1. Bảng Profiles & Auto Trigger khi User đăng nhập
+CREATE TABLE public.profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text,
+  full_name text,
+  avatar_url text,
+  phone text,
+  role text DEFAULT 'user', -- 'admin' | 'user'
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- RLS: User tự đọc và sửa profile của chính mình
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users view own profile" ON public.profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users update own profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);`} />
+
+          <h3>2. Khu Vực Admin Cấp Quyền Cho User (User Permissions &amp; RBAC)</h3>
+          <p>Hệ thống bắt buộc phải có màn hình quản trị (User Management) để Admin xem danh sách người dùng và cấp/thu hồi quyền truy cập:</p>
+          <div className="note-checklist">
+            <label className="checklist-item"><span>🛡️ <strong>Trang Quản Trị User:</strong> Chỉ user có role <code>admin</code> (hoặc email owner) mới được phép mở trang này.</span></label>
+            <label className="checklist-item"><span>🔑 <strong>Bảng Phân Quyền Chi Tiết:</strong> Lưu các cờ phân quyền theo từng module (ví dụ: <code>can_read_app</code>, <code>can_edit_app</code>, <code>role</code>).</span></label>
+            <label className="checklist-item"><span>⚡ <strong>Bảo Vệ API &amp; RLS:</strong> Chỉ Admin mới có quyền thực thi lệnh UPDATE trên bảng quyền người dùng.</span></label>
+          </div>
+
+          <CodeBlock lang="sql" code={`-- Bảng phân quyền chi tiết (VD: tkw_user_permissions hoặc fml_user_permissions)
+CREATE TABLE public.user_permissions (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text NOT NULL,
+  role text DEFAULT 'user', -- 'admin' | 'user'
+  can_read_module_a boolean DEFAULT true,
+  can_edit_module_a boolean DEFAULT false,
+  can_read_module_b boolean DEFAULT false,
+  can_edit_module_b boolean DEFAULT false,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- RLS: Mọi user đọc được quyền của chính mình; Chỉ Admin mới được sửa quyền
+ALTER TABLE public.user_permissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "User read own permissions" ON public.user_permissions
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Admin manage all permissions" ON public.user_permissions
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.user_permissions WHERE user_id = auth.uid() AND role = 'admin')
+  );`} />
+
+          <h3>3. Mô Hình Group User / Gia Đình (Family &amp; Mikawaii Pattern)</h3>
+          <Alert type="info">
+            <strong>Mô hình Tổ Chức / Gia Đình Đa Người Dùng (Multi-Tenant Group):</strong> Áp dụng cho các ứng dụng quản lý công việc gia đình, nhóm chi tiêu, dự án chung hoặc trường học (như dự án <strong>Family Management</strong> và <strong>Mikawaii</strong>).
+          </Alert>
+
+          <h4>Nguyên Tắc Thiết Kế:</h4>
+          <div className="note-checklist">
+            <label className="checklist-item"><span>👑 <strong>Ai cũng có thể tạo Gia Đình / Group riêng:</strong> Bất kỳ User nào sau khi đăng nhập đều có quyền bấm nút "Tạo Gia Đình / Nhóm mới" và tự động trở thành <strong>Owner (Chủ nhóm)</strong>.</span></label>
+            <label className="checklist-item"><span>✉️ <strong>Mời Thành Viên (Invite Members):</strong> Chủ nhóm có thể mời thành viên khác qua Email hoặc gửi Mã mời (Invite Code/Link) để tham gia làm <strong>Member</strong>.</span></label>
+            <label className="checklist-item"><span>⭐ <strong>Bổ Nhiệm Thêm Admin Gia Đình:</strong> Chủ nhóm hoặc Admin hiện tại có quyền thăng cấp (Promote) thành viên bất kỳ lên làm <strong>Admin</strong> của gia đình đó để cùng quản trị dữ liệu.</span></label>
+            <label className="checklist-item"><span>🔒 <strong>Cô Lập Dữ Liệu Tuyệt Đối (Group Data Isolation):</strong> Toàn bộ dữ liệu (chi tiêu, công việc, nhật ký) đều gắn với <code>family_id</code> hoặc <code>group_id</code>. Thành viên gia đình này tuyệt đối không thể thấy dữ liệu gia đình khác.</span></label>
+          </div>
+
+          <h4>Cấu Trúc Database Chuẩn:</h4>
+          <CodeBlock lang="sql" code={`-- 1. Bảng Gia đình / Group
+CREATE TABLE public.families (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL, -- VD: "Gia đình Johnny & Bé Miu"
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  invite_code text UNIQUE DEFAULT substring(md5(random()::text) from 1 for 8),
+  created_at timestamptz DEFAULT now()
+);
+
+-- 2. Bảng Thành viên Gia đình (Liên kết User <-> Family)
+CREATE TABLE public.family_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id uuid REFERENCES public.families(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  role text DEFAULT 'member', -- 'owner' | 'admin' | 'member'
+  nickname text,              -- VD: "Bố", "Mẹ", "Con trai"
+  joined_at timestamptz DEFAULT now(),
+  UNIQUE(family_id, user_id)
+);
+
+-- 3. Bảng Dữ liệu gắn theo Family (VD: Quản lý chi tiêu gia đình)
+CREATE TABLE public.family_expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id uuid REFERENCES public.families(id) ON DELETE CASCADE,
+  created_by uuid REFERENCES auth.users(id),
+  title text NOT NULL,
+  amount numeric NOT NULL,
+  category text,
+  expense_date date DEFAULT CURRENT_DATE,
+  created_at timestamptz DEFAULT now()
+);
+
+-- RLS: Thành viên chỉ xem & thao tác dữ liệu thuộc gia đình mình tham gia
+ALTER TABLE public.family_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.family_expenses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "View own family members" ON public.family_members
+  FOR SELECT USING (
+    family_id IN (SELECT family_id FROM public.family_members WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "View family expenses" ON public.family_expenses
+  FOR SELECT USING (
+    family_id IN (SELECT family_id FROM public.family_members WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Insert family expenses" ON public.family_expenses
+  FOR INSERT WITH CHECK (
+    family_id IN (SELECT family_id FROM public.family_members WHERE user_id = auth.uid())
+  );`} />
+
+          <h4>Code TypeScript Mẫu: Tạo Nhóm &amp; Bổ Nhiệm Admin</h4>
+          <CodeBlock lang="typescript" code={`// 1. Tạo Gia đình mới & trở thành Owner
+async function createNewFamily(familyName: string, userId: string) {
+  // Tạo family
+  const { data: family, error: famErr } = await supabase
+    .from('families')
+    .insert({ name: familyName, created_by: userId })
+    .select()
+    .single();
+
+  if (famErr) throw famErr;
+
+  // Thêm người tạo làm Owner
+  await supabase.from('family_members').insert({
+    family_id: family.id,
+    user_id: userId,
+    role: 'owner',
+    nickname: 'Chủ hộ',
+  });
+
+  return family;
+}
+
+// 2. Mời thành viên qua mã Invite Code
+async function joinFamilyByCode(inviteCode: string, userId: string, nickname: string) {
+  const { data: family, error } = await supabase
+    .from('families')
+    .select('id')
+    .eq('invite_code', inviteCode.trim())
+    .single();
+
+  if (error || !family) throw new Error('Mã mời không tồn tại');
+
+  return await supabase.from('family_members').insert({
+    family_id: family.id,
+    user_id: userId,
+    role: 'member',
+    nickname,
+  });
+}
+
+// 3. Thăng cấp thành viên lên Admin Gia Đình
+async function promoteToFamilyAdmin(familyId: string, targetUserId: string) {
+  return await supabase
+    .from('family_members')
+    .update({ role: 'admin' })
+    .eq('family_id', familyId)
+    .eq('user_id', targetUserId);
+}`} />
+
+          <Alert type="tip">
+            <strong>Mẹo kiến trúc:</strong> Một User có thể tham gia nhiều Family/Group khác nhau (ví dụ: Gia đình riêng + Nhóm đồng nghiệp công ty). Giao diện nên có Dropdown chọn <em>Active Family/Group Switcher</em> ở Header để chuyển ngữ cảnh dữ liệu mượt mà.
+          </Alert>
         </div>
       )
     }

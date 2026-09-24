@@ -63,6 +63,8 @@ describe('mappers round-trips', () => {
       status: 'Production',
       priority: 'High',
       description: 'Crypto wallet',
+      author: 'johnnyhoang',
+      hosting: 'Vercel',
       isDisabled: true,
       techNotes: 'Vercel monorepo deployment',
       manualChecked: true,
