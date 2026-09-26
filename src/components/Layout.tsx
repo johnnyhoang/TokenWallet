@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import SettingsModal from './SettingsModal';
 import { applyTheme } from '../utils/theme';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import { WalletIcon, SettingsIcon, GoogleIcon } from './icons';
 
 export default function Layout() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { user, isAdmin, permissions, signInWithGoogle, signOut, isAuthLoading } = useAuth();
+  const { user, isAdmin, signInWithGoogle, signOut, isAuthLoading } = useAuth();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('app_theme') || 'dark';
@@ -21,35 +21,10 @@ export default function Layout() {
     <div className="app-wrapper">
       <header>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <WalletIcon />
-            JohnnyHoang's Wallet
+            <span>AppWallet</span>
           </h1>
-          <div className="tabs">
-            <NavLink
-              to="/"
-              className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
-              end
-            >
-              App Wallet
-            </NavLink>
-            {permissions?.can_read_token_wallet && (
-              <NavLink
-                to="/token-wallet"
-                className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
-              >
-                Token Wallet
-              </NavLink>
-            )}
-            {permissions?.can_read_payments && (
-              <NavLink
-                to="/payments"
-                className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
-              >
-                Payment Schedule
-              </NavLink>
-            )}
-          </div>
         </div>
         <div className="header-actions">
           <button

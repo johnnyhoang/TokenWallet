@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Try to register user identity safely (INSERT only if not exists)
     try {
       await supabase
-        .from('tkw_user_permissions')
+        .from('aw_user_permissions')
         .upsert(registerRow, { onConflict: 'user_id', ignoreDuplicates: true });
     } catch (err) {
       console.warn('permission row upsert failed', err);
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Read permissions row from DB
     const { data } = await supabase
-      .from('tkw_user_permissions')
+      .from('aw_user_permissions')
       .select('*')
       .eq('user_id', userId)
       .single();

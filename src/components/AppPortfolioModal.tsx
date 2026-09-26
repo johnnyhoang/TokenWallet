@@ -320,7 +320,7 @@ export function AppPortfolioModal({
 
     try {
       const row = appProjectToRow(updated);
-      await supabase.from('tkw_app_projects').update(row).eq('id', app.id);
+      await supabase.from('aw_app_projects').update(row).eq('id', app.id);
       onUpdateApp(updated);
       setFormData(updated);
     } catch (err) {
@@ -350,7 +350,7 @@ export function AppPortfolioModal({
 
     try {
       const row = appProjectToRow(updated);
-      const { error } = await supabase.from('tkw_app_projects').update(row).eq('id', app.id);
+      const { error } = await supabase.from('aw_app_projects').update(row).eq('id', app.id);
       if (error) throw error;
       onUpdateApp(updated);
       setFormData(updated);
@@ -369,7 +369,7 @@ export function AppPortfolioModal({
 
     try {
       await supabase
-        .from('tkw_app_backlog_items')
+        .from('aw_app_backlog_items')
         .update({ is_completed: nextCompleted })
         .eq('id', item.id);
       onBacklogChange(nextBacklog);
@@ -390,7 +390,7 @@ export function AppPortfolioModal({
 
     try {
       const row = backlogItemToRow(newItem, app.id);
-      await supabase.from('tkw_app_backlog_items').insert(row);
+      await supabase.from('aw_app_backlog_items').insert(row);
       onBacklogChange(nextBacklog);
       setNewBacklogTitle('');
     } catch (err: any) {
@@ -403,7 +403,7 @@ export function AppPortfolioModal({
     if (!canEdit) return;
     const nextBacklog = backlog.filter((b) => b.id !== itemId);
     try {
-      await supabase.from('tkw_app_backlog_items').delete().eq('id', itemId);
+      await supabase.from('aw_app_backlog_items').delete().eq('id', itemId);
       onBacklogChange(nextBacklog);
     } catch (err: any) {
       alert('Lỗi xóa task: ' + (err?.message || ''));
@@ -445,7 +445,7 @@ export function AppPortfolioModal({
       };
 
       const row = appProjectToRow(updated);
-      const { error } = await supabase.from('tkw_app_projects').upsert(row);
+      const { error } = await supabase.from('aw_app_projects').upsert(row);
       if (error) throw error;
 
       onUpdateApp(updated);
